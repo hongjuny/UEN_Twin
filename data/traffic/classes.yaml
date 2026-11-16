@@ -9,18 +9,28 @@ cdn_cache_nodes: [slc-ddc]       # CDN cache servers inside the network (assumed
 cdn_share: 0.6                   # share of streaming served from the cache instead of the internet exit
 hospital_nodes: [slc-uofu]       # telehealth hub (University of Utah Health, assumed)
 
+# Stochastic layers (v1-platform stage 2)
+regional_correlation: 0.6        # nodes of one region (a core PoP and the distribution nodes under it) move together
+day_of_week_factor: [1.0, 1.0, 1.0, 1.0, 0.92, 1.0, 1.0]   # Monday..Sunday; weekends use the weekend curves
+
+# Sessions: only the server side of this class is compared with node session capacity (registration, logins).
+server_session_class: transactional
+tracked_session_classes: [telehealth]   # recorded separately, no capacity comparison
+
 # Share of each site type's peak demand by class (each row sums to 1).
 site_mix:
-  k12: {k12_instruction: 0.9, streaming: 0.1}
-  higher_ed: {higher_ed_general: 0.5, streaming: 0.3, research_bulk: 0.15, transactional: 0.05}
-  healthcare: {telehealth: 1.0}
+  k12: {k12_instruction: 0.8, general_internet: 0.1, streaming: 0.1}
+  higher_ed: {general_internet: 0.5, streaming: 0.3, research_bulk: 0.15, transactional: 0.05}
+  healthcare: {telehealth: 0.3, general_internet: 0.7}   # most clinic traffic is records, cloud and web, not video
 
-# Concurrent sessions each node can handle (servers, firewalls), by node kind; per-node overrides below.
+# Concurrent server-side sessions each node can handle (registration/login servers, firewalls), by node kind.
+# Calibrated so that the weekday-semester peak is roughly 20-30% for the large campuses (normal baseline);
+# smaller campuses sit lower. Per-node overrides below.
 session_capacity_by_kind:
   pop: 2000000
-  datacenter: 1000000
+  datacenter: 50000
   university: 200000
-  technical_college: 50000
+  technical_college: 20000
   school_district: 100000
   healthcare: 50000
   other: 50000
@@ -37,6 +47,9 @@ session_capacity_by_node: {}
 # requests arriving at the server for clients_to_server).
 # sessions_per_gbps: concurrent connections per Gbps of traffic (small for big flows, huge for short requests).
 # priority: 1 (highest) .. 5, used by intervention tools later.
+# wander: regional mean-reverting fluctuation (tau = how long a deviation lasts, sigma = typical relative size).
+# bursts: short extra demand; Poisson arrivals per node, lognormal size as a fraction of the node's class peak,
+#         duration uniform between min and max minutes.
 # hourly: multiplier on the class peak by hour (0..23), linearly interpolated, per academic mode.
 classes:
   k12_instruction:
@@ -45,16 +58,20 @@ classes:
     toward_node_share: 0.9
     sessions_per_gbps: 2000
     priority: 2
+    wander: {tau_minutes: 60, sigma: 0.15}
+    bursts: {rate_per_hour: 0.3, median_fraction: 0.15, sigma_log: 0.5, min_minutes: 1, max_minutes: 10}
     hourly:
       weekday_semester: [.02, .02, .02, .02, .02, .05, .15, .4, 1, 1, 1, 1, 1, 1, 1, .6, .3, .15, .15, .15, .15, .1, .05, .02]
       weekend: [.02, .02, .02, .02, .02, .02, .03, .04, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .05, .04, .03, .02]
       break: [.02, .02, .02, .02, .02, .02, .03, .05, .08, .08, .08, .08, .08, .08, .08, .06, .05, .04, .04, .04, .04, .03, .03, .02]
-  higher_ed_general:
-    description: University general use (web, cloud, LMS)
+  general_internet:
+    description: General internet use by every institution (web, cloud, LMS, electronic health record SaaS)
     pattern: exit_to_node
     toward_node_share: 0.8
     sessions_per_gbps: 3000
     priority: 3
+    wander: {tau_minutes: 90, sigma: 0.12}
+    bursts: {rate_per_hour: 0.5, median_fraction: 0.15, sigma_log: 0.5, min_minutes: 1, max_minutes: 10}
     hourly:
       weekday_semester: [.2, .15, .12, .1, .1, .12, .2, .4, .8, 1, 1, 1, 1, 1, 1, 1, 1, .8, .65, .6, .6, .55, .4, .3]
       weekend: [.2, .15, .12, .1, .1, .1, .12, .15, .25, .35, .4, .4, .4, .4, .4, .4, .4, .4, .4, .4, .4, .35, .3, .25]
@@ -65,6 +82,8 @@ classes:
     toward_node_share: 0.95
     sessions_per_gbps: 200
     priority: 5
+    wander: {tau_minutes: 45, sigma: 0.15}
+    bursts: {rate_per_hour: 1.0, median_fraction: 0.3, sigma_log: 0.6, min_minutes: 1, max_minutes: 10}
     hourly:
       weekday_semester: [.55, .4, .25, .15, .12, .12, .15, .2, .3, .35, .35, .35, .4, .4, .4, .45, .5, .6, .75, .9, 1, 1, .95, .75]
       weekend: [.7, .55, .4, .25, .15, .12, .12, .15, .25, .35, .45, .5, .55, .6, .6, .65, .7, .8, .9, 1, 1, 1, 1, .85]
@@ -75,6 +94,8 @@ classes:
     toward_node_share: 0.5
     sessions_per_gbps: 500
     priority: 1
+    wander: {tau_minutes: 60, sigma: 0.10}
+    bursts: {rate_per_hour: 0.1, median_fraction: 0.1, sigma_log: 0.4, min_minutes: 1, max_minutes: 10}
     hourly:
       weekday_semester: [.1, .1, .1, .1, .1, .12, .2, .5, .9, 1, 1, 1, 1, 1, 1, 1, .9, .6, .4, .3, .25, .2, .15, .1]
       weekend: [.1, .1, .1, .1, .1, .1, .12, .15, .25, .3, .3, .3, .3, .3, .3, .3, .3, .25, .2, .2, .15, .15, .1, .1]
@@ -86,6 +107,8 @@ classes:
     toward_node_share: 0.5
     sessions_per_gbps: 2
     priority: 4
+    wander: {tau_minutes: 120, sigma: 0.15}
+    bursts: {rate_per_hour: 0.5, median_fraction: 0.8, sigma_log: 0.7, min_minutes: 1, max_minutes: 10}
     hourly:
       weekday_semester: [.6, .6, .6, .6, .6, .6, .6, .65, .7, .8, .8, .8, .8, .8, .8, .8, .8, .75, .7, .7, .65, .65, .6, .6]
       weekend: [.55, .55, .55, .55, .55, .55, .55, .55, .55, .6, .6, .6, .6, .6, .6, .6, .6, .6, .6, .6, .55, .55, .55, .55]
@@ -97,6 +120,8 @@ classes:
     toward_node_share: 0.3
     sessions_per_gbps: 50000
     priority: 2
+    wander: {tau_minutes: 30, sigma: 0.15}
+    bursts: {rate_per_hour: 0.5, median_fraction: 0.3, sigma_log: 0.5, min_minutes: 1, max_minutes: 10}
     hourly:
       weekday_semester: [.05, .03, .02, .02, .02, .03, .1, .4, .9, 1, 1, 1, 1, 1, 1, 1, .9, .7, .6, .6, .55, .45, .3, .1]
       weekend: [.05, .03, .02, .02, .02, .02, .04, .08, .15, .25, .3, .3, .3, .3, .3, .3, .3, .3, .3, .3, .25, .2, .15, .08]

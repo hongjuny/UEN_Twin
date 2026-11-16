@@ -13,6 +13,7 @@ dependencies = [
     "pyarrow>=15",
     "plotly>=5.24",
     "streamlit>=1.40",
+    "simpy>=4.1",
 ]
 
 [project.scripts]

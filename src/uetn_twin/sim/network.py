@@ -13,6 +13,11 @@ to that bottleneck link. Downstream links are not thinned, so utilization is rep
 generated = delivered + dropped exactly, and a link never drops more than its own excess.
 
 Latency is ROUGH AND INDICATIVE ONLY: base x (1 + rho / (1 - rho)), rho = offered utilization capped at 0.99.
+
+Sessions: a node's server sessions are the connections of the server-session class (transactional: registration,
+logins) that the node serves; only these are compared with its session capacity. Sessions of tracked classes
+(telehealth) are counted at both ends of each pair and recorded without a capacity check, so hospital systems
+and campus registration servers are never mixed.
 """
 
 from __future__ import annotations
@@ -44,8 +49,9 @@ class FlowResult:
     dropped_gbps: np.ndarray     # (L, 2, C) dropped traffic attributed to the bottleneck link
     latency_ms: np.ndarray       # (L, 2) rough indicative latency
     node_ids: list[str]
-    sessions: np.ndarray         # (N,) concurrent sessions touching each node
+    server_sessions: np.ndarray  # (N,) server-side sessions of the server-session class
     session_capacity: np.ndarray  # (N,)
+    tracked_sessions: dict[str, np.ndarray]  # class -> (N,) sessions touching each node, no capacity check
     generated_gbps: float
     delivered_gbps: float
     dropped_total_gbps: float    # includes unreachable demand
@@ -59,7 +65,8 @@ class FlowResult:
 
     @property
     def session_utilization(self) -> np.ndarray:
-        return self.sessions / self.session_capacity
+        """Server sessions / capacity."""
+        return self.server_sessions / self.session_capacity
 
 
 class DirectedFlowBackend(FlowBackend):
@@ -130,14 +137,19 @@ class DirectedFlowBackend(FlowBackend):
         util = total / cap
         rho = np.minimum(util, RHO_CAP)
         latency = np.repeat(self._base_latency, 2) * (1 + rho / (1 - rho))
-        spg = np.array([self.tc.classes[c].sessions_per_gbps for c in od.classes])
-        sessions = ends @ (vol @ spg)
+        server_ci = od.classes.index(self.tc.server_session_class)
+        server_spg = self.tc.classes[self.tc.server_session_class].sessions_per_gbps
+        server_sessions = (od.node_volumes[server_ci] * server_spg if od.node_volumes.size
+                           else np.zeros(len(self._node_ids)))
+        tracked = {c: ends @ (vol[:, od.classes.index(c)] * self.tc.classes[c].sessions_per_gbps)
+                   for c in self.tc.tracked_session_classes}
         n_links = len(self._links)
         return FlowResult(
             t=t, link_ids=[ln.id for ln in self._links], classes=od.classes,
             load_gbps=load.reshape(n_links, 2, -1), utilization=util.reshape(n_links, 2),
             dropped_gbps=dropped.reshape(n_links, 2, -1), latency_ms=latency.reshape(n_links, 2),
-            node_ids=self._node_ids, sessions=sessions, session_capacity=self._session_cap,
+            node_ids=self._node_ids, server_sessions=server_sessions, session_capacity=self._session_cap,
+            tracked_sessions=tracked,
             generated_gbps=od.total_gbps, delivered_gbps=float(vol.sum()) - dropped_pairs,
             dropped_total_gbps=dropped_pairs + unreachable, unreachable_gbps=unreachable,
             unreachable_nodes=sorted(n for n in self._graph.nodes if n not in connected),

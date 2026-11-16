@@ -6,7 +6,7 @@ How each value in `data/topology/` was obtained. Source: UEN|UTN Infrastructure 
 
 - All coordinates are city centers (assumed), for every node.
 - All link latencies are derived from distance using `data/physics.yaml` (5 us/km, detour 1.4, floor 0.05 ms), all assumed.
-- All site counts and demand values in `sites.yaml` are assumed (K-12 100 Mbps/school, healthcare 200 Mbps/site, higher-ed campus 2-10 Gbps).
+- All site counts and demand values in `sites.yaml` are assumed (K-12 100 Mbps/school, healthcare 100 Mbps/site, higher-ed campus 2-10 Gbps).
 - Core-node site rows (esp. the Salt Lake PoPs, wsu-ogden, uvu-orem) stand for Wasatch Front districts, charters and clinics that the map does not print individually. The work order's 8-40 K-12 sites per distribution node alone sums to ~580, far below the ~2,100 locations the map reports, so the remainder was placed on core nodes.
 - Parallel double lines on the map (usu-logan--wsu-ogden, slc--uvu-orem) are modeled as one link; capacity not doubled.
 - Link-level `confidence` describes where the link was read from; it is `inferred` or `assumed` for anything not drawn explicitly.
@@ -111,15 +111,20 @@ Peak utilization of the eastern gateway (uvu-orem--uvu-wasatch) over a weekday, 
 
 | concurrency (k12 / healthcare / higher-ed) | gateway 20G | gateway 40G (current) | gateway 400G | links over 100% at 40G |
 |---|---|---|---|---|
-| 0.4 / 0.5 / 1.0 (default) | 140% | 70% | 7% | 0 |
-| 0.4 / 0.5 / 0.8 | 126% | 63% | 6% | 0 |
-| 0.4 / 0.5 / 0.6 | 111% | 56% | 6% | 0 |
-| 0.4 / 0.5 / 0.5 | 104% | 52% | 5% | 0 |
-| 0.4 / 0.5 / 0.4 | 97% | 49% | 5% | 0 |
-| all x0.7 (0.28 / 0.35 / 0.7) | 98% | 49% | 5% | 0 |
-| all x0.5 (0.2 / 0.25 / 0.5) | 70% | 35% | 4% | 0 |
+| 0.4 / 0.5 / 1.0 (default) | 116% | 58% | 6% | 0 |
+| 0.4 / 0.5 / 0.8 | 101% | 51% | 5% | 0 |
+| 0.4 / 0.5 / 0.6 | 87% | 43% | 4% | 0 |
+| 0.4 / 0.5 / 0.5 | 80% | 40% | 4% | 0 |
+| 0.4 / 0.5 / 0.4 | 73% | 36% | 4% | 0 |
+| all x0.7 (0.28 / 0.35 / 0.7) | 81% | 41% | 4% | 0 |
+| all x0.5 (0.2 / 0.25 / 0.5) | 58% | 29% | 3% | 0 |
 
-With the gateway at 20G the default factors gave 140%. Under the defaults every other link peaks at 68% or less.
+With the gateway at 20G the default factors gave 140%. Under the defaults every other link peaks at 54% or less.
+
+## Changes to assumptions
+
+- **v1-platform (2026-11-16): healthcare unit demand 200 -> 100 Mbps per site.** With the v1 traffic classes, healthcare demand had been classified entirely as telehealth video and came out as the largest class (70.5 Gbps), which an operator would find implausible. Most hospital and clinic traffic is electronic health records, cloud and web; many sites are small clinics. Healthcare demand is now split 30% telehealth / 70% general_internet (data/traffic/classes.yaml) and the unit demand was halved. Total v0 peak demand assumption: 258.6 -> 223.3 Gbps. The concurrency factor (0.5) is unchanged.
+- **v1-platform: higher_ed_general renamed general_internet** and also used by K-12 (10%) and healthcare (70%).
 
 ## Questions for UETN
 

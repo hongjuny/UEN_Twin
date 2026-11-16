@@ -130,7 +130,7 @@ def build_map(topo: Topology, link_state: dict[str, dict], node_demand: dict[str
         hover_lon.append((lo + lob) / 2)
         state = f"{st['utilization']:.1%} ({st['load_gbps']:.2f} of {ln.capacity_gbps:g} Gbps)" if up else "DOWN"
         hover_txt.append(f"<b>{nodes[ln.a].name} - {nodes[ln.b].name}</b><br>{ln.link_class.value}, {ln.capacity_gbps:g} Gbps"
-                         f"<br>utilization: {state}<br>source: {ln.confidence}")
+                         f"<br>utilization (offered load): {state}<br>source: {ln.confidence}")
 
     fig = go.Figure()
     for (width, band, opacity), (lats, lons) in sorted(groups.items(), key=lambda kv: kv[0][1]):

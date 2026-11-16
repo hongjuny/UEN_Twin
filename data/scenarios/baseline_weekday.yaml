@@ -1,0 +1,13 @@
+id: baseline_weekday
+title: "Normal weekday during the semester"
+description: >
+  An ordinary Monday in the school term. The daily rhythm of v0, now with regional fluctuation and short
+  bursts. SIMULATED; every value is an assumption.
+base_profile: weekday_semester
+day: Monday
+start: "00:00"
+duration_hours: 24
+seed: 42
+confidence: assumed
+overlays: []
+events: []

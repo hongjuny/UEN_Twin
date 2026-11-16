@@ -50,7 +50,7 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+. The map loads some g
 
 ## Demand assumption
 
-**Total peak demand assumption: 258.6 Gbps (needs confirmation from UETN).**
+**Total peak demand assumption: 223.3 Gbps (needs confirmation from UETN).** (258.6 Gbps before v1-platform, when healthcare sites were assumed at 200 Mbps instead of 100 Mbps; see docs/DATA_PROVENANCE.md.)
 Peak demand of a node = site count x unit demand x concurrency factor (K-12 0.4, healthcare 0.5, higher-ed 1.0);
 see `data/traffic_profile.yaml`. The concurrency factors are not tuned to results. If UETN provides real utilization,
 calibrate them first; `docs/DATA_PROVENANCE.md` has a sensitivity table. The internet exit (`slc-level3`) and
@@ -66,9 +66,10 @@ calibrate them first; `docs/DATA_PROVENANCE.md` has a sensitivity table. The int
 - **Direction.** Link load is summed over both directions. Internet traffic is mostly downstream, so the value
   approximates downstream utilization and overstates upstream (per-direction modeling is in `docs/BACKLOG.md`).
 - **Eastern gateway.** The class of `uvu-orem--uvu-wasatch` is not readable on the map; 40G is an inference
-  (20G would run at 140% at peak). First question for UETN.
+  (20G ran at 140% at peak under the v0.1.1 demand). First question for UETN.
 - **Sites.** The map shows representative points only. Districts, charters and clinics not printed on the map are
   attached to the Salt Lake, Ogden and Orem PoPs so that the total is near the map's ~2,100 locations (2,244 here).
+- **Offered load.** From v1-platform on, link utilization is the offered load (traffic that wants to cross the link) divided by capacity; above 100% the excess is dropped at each flow's bottleneck link, and downstream links are not reduced.
 - Unit demands, concurrency factors, site counts, latencies and coordinates are all assumed.
 
 ## Single points of failure (`uetn-twin report --spof`)

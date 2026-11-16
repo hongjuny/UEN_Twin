@@ -97,9 +97,14 @@ def _class_report(topo: topology.Topology, mode: str, at: str, top: int) -> None
         rev = res.utilization[i, 1 - d]
         print(f"  {arrow(i, d):40s} {res.utilization[i, d]:5.1%}  (reverse {rev:5.1%}, latency ~{res.latency_ms[i, d]:.2f} ms, rough)")
     su = res.session_utilization
-    print("\n[sessions] busiest nodes")
+    print("\n[server sessions] busiest nodes (transactional, server side)")
     for i in np.argsort(-su)[:top]:
-        print(f"  {res.node_ids[i]:20s} {res.sessions[i]:10,.0f} sessions  {su[i]:5.1%} of capacity {res.session_capacity[i]:,.0f}")
+        if res.server_sessions[i] <= 0:
+            break
+        print(f"  {res.node_ids[i]:20s} {res.server_sessions[i]:10,.0f} sessions  {su[i]:5.1%} of capacity {res.session_capacity[i]:,.0f}")
+    for name, arr in res.tracked_sessions.items():
+        busiest = ", ".join(f"{res.node_ids[i]} {arr[i]:,.0f}" for i in np.argsort(-arr)[:3])
+        print(f"[{name} sessions] recorded, not capacity-checked: {busiest}")
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -130,6 +135,41 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_run(args: argparse.Namespace) -> int:
+    """Batch-run a v1 scenario on the SimPy clock and print a short summary."""
+    import sqlite3
+
+    import pandas as pd
+
+    from .sim.runner import SimRun
+    from .sim.scenario import load_scenario
+
+    if _load_or_exit(args.data) is None:
+        return 1
+    run = SimRun(load_scenario(args.scenario), seed=args.seed, tick_s=args.tick, telemetry_s=args.telemetry_interval,
+                 out_base=Path(args.out))
+    out = run.run()
+    conn = sqlite3.connect(out / "telemetry.sqlite")
+    tot = pd.read_sql("SELECT * FROM totals", conn)
+    top = pd.read_sql("SELECT link_id, from_node, to_node, MAX(utilization) AS peak FROM link_telemetry "
+                      "GROUP BY link_id, from_node, to_node ORDER BY peak DESC LIMIT 10", conn)
+    sess = pd.read_sql("SELECT node_id, MAX(session_utilization) AS peak FROM node_telemetry "
+                       "GROUP BY node_id ORDER BY peak DESC LIMIT 5", conn)
+    conn.close()
+    print(f"SIMULATED scenario '{run.scenario.id}' (seed {run.seed}): {run.ticks} ticks of {args.tick:g} s, "
+          f"telemetry every {args.telemetry_interval:g} s, wall time {run.summary['wall_seconds']} s")
+    print(f"Mean offered {tot.generated_gbps.mean():.1f} Gbps, peak interval {tot.generated_gbps.max():.1f} Gbps; "
+          f"dropped {tot.dropped_gbps.sum() * args.telemetry_interval / 8:.1f} GB total")
+    print("\nPeak utilization by direction (interval averages, offered load):")
+    for r in top.itertuples():
+        print(f"  {r.from_node} -> {r.to_node:28s} {r.peak:6.1%}")
+    print("\nPeak server-session utilization:")
+    for r in sess.itertuples():
+        print(f"  {r.node_id:20s} {r.peak:6.1%}")
+    print(f"\nWrote {out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="uetn-twin", description="UETN backbone digital twin")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -143,6 +183,14 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--data", default=str(topology.DEFAULT_DIR))
     s.add_argument("--out", default=str(engine.DEFAULT_OUT))
     s.set_defaults(func=cmd_simulate)
+    rr = sub.add_parser("run", help="batch-run a v1 scenario (SimPy clock) and write telemetry")
+    rr.add_argument("scenario", help="scenario id in data/scenarios/ or a YAML path")
+    rr.add_argument("--seed", type=int, default=None, help="override the scenario seed")
+    rr.add_argument("--tick", type=float, default=10, help="traffic tick in simulated seconds")
+    rr.add_argument("--telemetry-interval", type=float, default=30, help="averaging interval in simulated seconds")
+    rr.add_argument("--data", default=str(topology.DEFAULT_DIR))
+    rr.add_argument("--out", default=str(engine.DEFAULT_OUT))
+    rr.set_defaults(func=cmd_run)
     r = sub.add_parser("report", help="reports on the topology")
     r.add_argument("--spof", action="store_true", help="single points of failure")
     r.add_argument("--classes", action="store_true", help="directed per-class link loads (v1 baseline)")

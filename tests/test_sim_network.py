@@ -42,7 +42,7 @@ def _dir_load(res, link_id, frm):
 
 
 def test_classes_config(tc):
-    assert set(tc.names) == {"k12_instruction", "higher_ed_general", "streaming", "telehealth", "research_bulk", "transactional"}
+    assert set(tc.names) == {"k12_instruction", "general_internet", "streaming", "telehealth", "research_bulk", "transactional"}
     assert tc.confidence == "assumed"
     for mix in tc.site_mix.values():
         assert sum(mix.values()) == pytest.approx(1.0)
@@ -108,7 +108,11 @@ def test_v0_interface_still_works(topo, tc, backend):
 def test_sessions_and_latency_are_reported(topo, tc, backend):
     backend.apply_class_demand(_od(topo, tc))
     res = backend.evaluate(T10)
-    assert res.sessions.sum() > 0 and (res.session_capacity > 0).all()
+    assert res.server_sessions.sum() > 0 and (res.session_capacity > 0).all()
+    tx = res.classes.index("transactional")
+    servers = {n for n, v in zip(res.node_ids, backend._od.node_volumes[tx]) if v > 0}
+    assert {n for n, s in zip(res.node_ids, res.server_sessions) if s > 0} == servers  # only transactional servers
+    assert res.tracked_sessions["telehealth"].sum() > 0
     assert (res.latency_ms > 0).all()
 
 

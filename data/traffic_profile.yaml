@@ -11,7 +11,7 @@ internet_share: 0.7
 # Demand of one site if all its users were active (Gbps).
 unit_demand_gbps:
   k12_gbps_per_site: 0.1          # 100 Mbps per school
-  healthcare_gbps_per_site: 0.2   # 200 Mbps per hospital/clinic
+  healthcare_gbps_per_site: 0.1   # 100 Mbps per hospital/clinic (many small clinics; was 0.2 in v0.1.1)
   higher_ed_gbps_per_campus: 2.0  # default; the range is 2-10 Gbps, see overrides below
 
 # Per-node overrides for higher-ed campus demand (Gbps per campus).
