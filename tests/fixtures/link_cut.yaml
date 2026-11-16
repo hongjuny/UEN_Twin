@@ -1,0 +1,15 @@
+# Test only (not a demo scenario): cut the eastern ring and the single Wendover link, then restore.
+id: link_cut
+title: "Test: link cuts"
+base_profile: weekday_semester
+day: Monday
+start: "10:00"
+duration_hours: 1
+seed: 1
+confidence: assumed
+overlays: []
+events:
+  - {at: "10:10", action: set_link_state, link: moab--usu-eastern, up: false}
+  - {at: "10:20", action: set_link_state, link: slc-slcc--wendover, up: false}
+  - {at: "10:40", action: set_link_state, link: moab--usu-eastern, up: true}
+  - {at: "10:40", action: set_link_state, link: slc-slcc--wendover, up: true}

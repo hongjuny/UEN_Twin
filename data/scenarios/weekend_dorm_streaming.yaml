@@ -1,0 +1,18 @@
+id: weekend_dorm_streaming
+title: "Saturday evening: residence-hall streaming"
+description: >
+  Saturday evening. K-12 is nearly idle; students in residence halls stream video, served from the internet exit
+  and the CDN cache in Salt Lake, so the Salt Lake -> campus direction fills up from 18:00 to midnight.
+  SIMULATED; sizes are assumptions chosen for demonstration.
+base_profile: weekend
+day: Saturday
+start: "14:00"
+duration_hours: 10
+seed: 42
+confidence: assumed
+overlays:
+  - class: streaming
+    label: "Residence-hall streaming evening"
+    targets: [kind:university, kind:technical_college]
+    shape: {type: multiplier, start: "18:00", end: "00:00", factor: 1.8, ramp_min: 60}
+events: []

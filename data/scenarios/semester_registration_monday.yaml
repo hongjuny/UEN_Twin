@@ -1,0 +1,27 @@
+id: semester_registration_monday
+title: "Semester start: registration opens, Monday morning"
+description: >
+  Monday morning at the start of the semester. At 07:00 course registration opens at UVU and the University of
+  Utah and students pile in. The same morning USU sends AI model training data to the DDC data center.
+  SIMULATED; sizes are assumptions chosen for demonstration.
+notes: >
+  The session overload at U of U (and near-overload at UVU) is why university registration systems use waiting
+  queues. Size values (peak_x 10, 30 Gbps transfer) are assumed.
+base_profile: weekday_semester
+day: Monday
+start: "06:00"
+duration_hours: 6
+seed: 42
+confidence: assumed
+overlays:
+  - class: transactional
+    label: "Registration opens at UVU and U of U"
+    targets: [uvu-orem, slc-uofu]          # server side
+    sources: region:wasatch_front          # where on-network students connect from (half come via the internet exit)
+    shape: {type: spike, at: "07:00", rise_min: 2, peak_x: 10, decay_min: 45}
+    affects: [sessions, gbps]
+  - class: research_bulk
+    label: "USU -> DDC AI training data transfer"
+    od: [usu-logan, slc-ddc]
+    shape: {type: plateau, start: "08:30", end: "11:30", gbps: 30, ramp_min: 5}
+events: []

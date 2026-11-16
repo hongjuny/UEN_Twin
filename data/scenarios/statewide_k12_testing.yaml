@@ -1,0 +1,17 @@
+id: statewide_k12_testing
+title: "Statewide K-12 online assessment morning"
+description: >
+  A statewide online assessment day: every school district loads the testing platform at the same time from
+  08:00 to 12:00, so outlying single-path links (such as Kane) turn yellow. SIMULATED; sizes are assumptions.
+base_profile: weekday_semester
+day: Wednesday
+start: "06:00"
+duration_hours: 8
+seed: 42
+confidence: assumed
+overlays:
+  - class: k12_instruction
+    label: "Statewide online assessment"
+    targets: kind:school_district
+    shape: {type: multiplier, start: "08:00", end: "12:00", factor: 1.6, ramp_min: 20}
+events: []
