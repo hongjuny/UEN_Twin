@@ -55,13 +55,63 @@ def cmd_simulate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _class_report(topo: topology.Topology, mode: str, at: str, top: int) -> None:
+    """Directed per-class link loads at one moment of the deterministic baseline (v1-platform stage 1)."""
+    import numpy as np
+
+    from .sim.network import DirectedFlowBackend
+    from .sim.traffic import baseline_volumes, build_od, load_classes
+
+    tc = load_classes()
+    hh, mm = (int(x) for x in at.split(":"))
+    t = engine.DEFAULT_START.replace(hour=hh, minute=mm)
+    od = build_od(topo, tc, baseline_volumes(topo, tc, mode, t))
+    b = DirectedFlowBackend()
+    b.load(topo, tc)
+    b.apply_class_demand(od)
+    res = b.evaluate(t)
+    links = topo.links
+    cap = np.array([ln.capacity_gbps for ln in links])
+
+    def arrow(i: int, d: int) -> str:
+        a, z = (links[i].a, links[i].b) if d == 0 else (links[i].b, links[i].a)
+        return f"{a} -> {z}"
+
+    print(f"SIMULATED baseline ({mode}, {at}); directed loads, every value assumed")
+    print(f"Generated {res.generated_gbps:.1f} Gbps, delivered {res.delivered_gbps:.1f}, dropped {res.dropped_total_gbps:.2f}\n")
+    for ci, name in enumerate(res.classes):
+        load = res.load_gbps[:, :, ci]
+        order = np.argsort(-load, axis=None)[:top]
+        print(f"[{name}]  total {od.gbps[:, ci].sum():.1f} Gbps")
+        for flat in order:
+            i, d = divmod(int(flat), 2)
+            if load[i, d] <= 0:
+                break
+            print(f"  {arrow(i, d):40s} {load[i, d]:7.2f} Gbps  ({load[i, d] / cap[i]:5.1%} of {cap[i]:g}G, "
+                  f"direction total {res.utilization[i, d]:5.1%})")
+        print()
+    order = np.argsort(-res.utilization, axis=None)[:top]
+    print("[all classes] most utilized directions")
+    for flat in order:
+        i, d = divmod(int(flat), 2)
+        rev = res.utilization[i, 1 - d]
+        print(f"  {arrow(i, d):40s} {res.utilization[i, d]:5.1%}  (reverse {rev:5.1%}, latency ~{res.latency_ms[i, d]:.2f} ms, rough)")
+    su = res.session_utilization
+    print("\n[sessions] busiest nodes")
+    for i in np.argsort(-su)[:top]:
+        print(f"  {res.node_ids[i]:20s} {res.sessions[i]:10,.0f} sessions  {su[i]:5.1%} of capacity {res.session_capacity[i]:,.0f}")
+
+
 def cmd_report(args: argparse.Namespace) -> int:
-    if not args.spof:
-        print("nothing to report; use --spof")
+    if not (args.spof or args.classes):
+        print("nothing to report; use --spof or --classes")
         return 1
     topo = _load_or_exit(args.data)
     if topo is None:
         return 1
+    if args.classes:
+        _class_report(topo, args.mode, args.at, args.top)
+        return 0
     import pandas as pd
 
     df = engine.spof_table(topo)
@@ -95,6 +145,9 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_simulate)
     r = sub.add_parser("report", help="reports on the topology")
     r.add_argument("--spof", action="store_true", help="single points of failure")
+    r.add_argument("--classes", action="store_true", help="directed per-class link loads (v1 baseline)")
+    r.add_argument("--at", default="10:00", help="HH:MM for --classes")
+    r.add_argument("--mode", default="weekday_semester", help="academic mode for --classes")
     r.add_argument("--top", type=int, default=15)
     r.add_argument("--data", default=str(topology.DEFAULT_DIR))
     r.set_defaults(func=cmd_report)
