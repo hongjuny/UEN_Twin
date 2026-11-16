@@ -1,0 +1,5 @@
+# Physical constants for deriving link latency from geographic distance.
+# ALL values here are `assumed` (rules of thumb, not measured on UETN fiber).
+fiber_us_per_km: 5.0      # light in fiber: ~5 microseconds per km (assumed)
+detour_factor: 1.4        # cable routes are longer than the straight line (assumed)
+min_latency_ms: 0.05      # floor so co-located nodes (e.g. the 4 Salt Lake PoPs) never get 0 ms (assumed)

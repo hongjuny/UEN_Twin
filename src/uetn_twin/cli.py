@@ -1,0 +1,106 @@
+"""Command line entry point: ``uetn-twin <command>``."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+
+from . import engine, topology
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    try:
+        topo = topology.load(Path(args.data))
+    except topology.TopologyError as e:
+        print("Schema errors:", *e.problems, sep="\n  ")
+        return 1
+    problems = topology.check_consistency(topo)
+    if problems:
+        print("Consistency errors:", *problems, sep="\n  ")
+        return 1
+    tiers = Counter(n.tier for n in topo.nodes)
+    conf = Counter(x.confidence for x in [*topo.nodes, *topo.links])
+    print(
+        f"OK: {len(topo.nodes)} nodes ({dict(tiers)}), {len(topo.links)} links, "
+        f"{len(topo.sites)} site groups; confidence {dict(conf)}"
+    )
+    return 0
+
+
+def _load_or_exit(data: str) -> topology.Topology | None:
+    try:
+        topo = topology.load(Path(data))
+    except topology.TopologyError as e:
+        print("Schema errors:", *e.problems, sep="\n  ")
+        return None
+    problems = topology.check_consistency(topo)
+    if problems:
+        print("Consistency errors:", *problems, sep="\n  ")
+        return None
+    return topo
+
+
+def cmd_simulate(args: argparse.Namespace) -> int:
+    topo = _load_or_exit(args.data)
+    if topo is None:
+        return 1
+    start = datetime.fromisoformat(args.start)
+    run = engine.run_simulation(topo, args.hours, start, args.profile)
+    out = engine.write_run(topo, run, Path(args.out))
+    print(engine.summarize(topo, run))
+    print(f"\nWrote {out}/snapshots.parquet")
+    return 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    if not args.spof:
+        print("nothing to report; use --spof")
+        return 1
+    topo = _load_or_exit(args.data)
+    if topo is None:
+        return 1
+    import pandas as pd
+
+    df = engine.spof_table(topo)
+    cols = ["link", "link_class", "unreachable_nodes", "affected_sites", "overloaded_after_reroute", "unreachable"]
+    print("Single-link failures at weekday peak (sorted by affected sites, then overloaded links)\n")
+    with pd.option_context("display.width", 200, "display.max_colwidth", 60):
+        print(df[cols].head(args.top).to_string(index=False))
+    hit = df[df.overloaded_after_reroute > 0].sort_values("overloaded_after_reroute", ascending=False)
+    print("\nLinks whose failure overloads other links after rerouting (v1 scenario candidates, any rank):")
+    for r in hit.itertuples():
+        print(f"  {r.link} ({r.link_class}) -> overloads: {', '.join(r.overloaded_list)}")
+    if hit.empty:
+        print("  none")
+    base = df.attrs["baseline_overloaded"]
+    print(f"\nLinks already above 100% without any failure (excluded from the overload column): {base or 'none'}")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="uetn-twin", description="UETN backbone digital twin")
+    sub = parser.add_subparsers(dest="command", required=True)
+    v = sub.add_parser("validate", help="check topology YAML against the schema and consistency rules")
+    v.add_argument("--data", default=str(topology.DEFAULT_DIR), help="topology directory")
+    v.set_defaults(func=cmd_validate)
+    s = sub.add_parser("simulate", help="run the flow-level simulation and write snapshots.parquet")
+    s.add_argument("--hours", type=float, default=24)
+    s.add_argument("--start", default=engine.DEFAULT_START.isoformat(), help="ISO start time (default: Monday 00:00)")
+    s.add_argument("--profile", default="weekday_semester", help="hourly profile name from traffic_profile.yaml")
+    s.add_argument("--data", default=str(topology.DEFAULT_DIR))
+    s.add_argument("--out", default=str(engine.DEFAULT_OUT))
+    s.set_defaults(func=cmd_simulate)
+    r = sub.add_parser("report", help="reports on the topology")
+    r.add_argument("--spof", action="store_true", help="single points of failure")
+    r.add_argument("--top", type=int, default=15)
+    r.add_argument("--data", default=str(topology.DEFAULT_DIR))
+    r.set_defaults(func=cmd_report)
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

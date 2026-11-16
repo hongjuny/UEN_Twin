@@ -1,0 +1,48 @@
+# Demand model. EVERY value in this file is ASSUMED; replace with UETN measurements when available.
+# Calibration hint: if UETN supplies real utilization, adjust `concurrency` first (one number per site type).
+confidence: assumed
+
+# Where internet traffic enters the network, and how much of each node's demand goes there.
+# The remaining (1 - internet_share) is spread between node pairs with a gravity model
+# (pair demand proportional to the product of the two nodes' demands).
+internet_exit_node: slc-level3
+internet_share: 0.7
+
+# Demand of one site if all its users were active (Gbps).
+unit_demand_gbps:
+  k12_gbps_per_site: 0.1          # 100 Mbps per school
+  healthcare_gbps_per_site: 0.2   # 200 Mbps per hospital/clinic
+  higher_ed_gbps_per_campus: 2.0  # default; the range is 2-10 Gbps, see overrides below
+
+# Per-node overrides for higher-ed campus demand (Gbps per campus).
+higher_ed_campus_gbps_by_node:
+  slc-uofu: 8.0
+  slc-ddc: 5.0
+  usu-logan: 5.0
+  uvu-orem: 5.0
+  wsu-ogden: 4.0
+  utahtech-stgeorge: 4.0
+  slc-slcc: 3.0
+  suu-cedar: 3.0
+
+# Share of unit demand active at the same time at the daily peak.
+# peak demand of a node = sum over types of (site count x unit demand x concurrency)
+concurrency:
+  k12: 0.4
+  healthcare: 0.5
+  higher_ed: 1.0
+
+step_minutes: 5
+noise_pct: 0.10   # random +/-10% per flow per step
+seed: 42
+
+# Multiplier on peak demand by hour of day (0..23); values between hours are interpolated linearly.
+# Peak 08:00-15:00 = 1.0, evening 0.4, night 0.1 (weekday during the school term).
+hourly_factor:
+  weekday_semester: [0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.20, 0.50, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.80,
+                     0.60, 0.40, 0.40, 0.40, 0.40, 0.40, 0.20, 0.10]
+  weekend: [0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.15, 0.25, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+            0.30, 0.30, 0.30, 0.30, 0.30, 0.25, 0.15, 0.10]
+  # School break: schools idle, hospitals and universities partly active (assumed shape)
+  break: [0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.15, 0.30, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45,
+          0.40, 0.35, 0.35, 0.35, 0.30, 0.25, 0.15, 0.10]

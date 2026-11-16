@@ -1,0 +1,136 @@
+# Backbone / distribution nodes, transcribed from the UEN|UTN Infrastructure Map (2026-06-04) via workorder section 5.
+# lat/lon are city-center coordinates: ASSUMED for every node, regardless of the confidence field
+# (which describes the node's existence/role on the map). No external nodes yet: the grey circles
+# on the map have not been counted (open question, see docs/DATA_PROVENANCE.md).
+nodes:
+- {id: usu-logan, name: USU, tier: core, city: Logan, lat: 41.737, lon: -111.8338, kind: university, confidence: map, notes: Northern
+    core PoP}
+- {id: btc-logan, name: BTC Logan, tier: core, city: Logan, lat: 41.737, lon: -111.8338, kind: technical_college, confidence: map,
+  notes: ''}
+- {id: wsu-ogden, name: WSU, tier: core, city: Ogden, lat: 41.223, lon: -111.9738, kind: university, confidence: map, notes: ''}
+- {id: slc-level3, name: LEVEL 3, tier: core, city: Salt Lake City, lat: 40.7608, lon: -111.891, kind: pop, confidence: inferred,
+  notes: Assumed to be the commercial-carrier / internet exit (workorder section 6)}
+- {id: slc-slcc, name: SLCC, tier: core, city: Salt Lake City, lat: 40.7608, lon: -111.891, kind: university, confidence: map,
+  notes: ''}
+- {id: slc-ddc, name: DDC, tier: core, city: Salt Lake City, lat: 40.7608, lon: -111.891, kind: datacenter, confidence: map,
+  notes: ''}
+- {id: slc-uofu, name: U of U, tier: core, city: Salt Lake City, lat: 40.7608, lon: -111.891, kind: university, confidence: map,
+  notes: ''}
+- {id: uvu-orem, name: UVU, tier: core, city: Orem, lat: 40.2969, lon: -111.6946, kind: university, confidence: map, notes: Central
+    hub}
+- {id: uvu-wasatch, name: UVU WASATCH, tier: core, city: Heber City, lat: 40.507, lon: -111.413, kind: university, confidence: inferred,
+  notes: Location approximated as Heber City; western end of the eastern 20G ring}
+- {id: richfield-dc, name: RICHFIELD DATA CENTER, tier: core, city: Richfield, lat: 38.7725, lon: -112.0841, kind: datacenter,
+  confidence: map, notes: South-central hub}
+- {id: suu-cedar, name: SUU, tier: core, city: Cedar City, lat: 37.6775, lon: -113.0619, kind: university, confidence: map,
+  notes: Southwest hub}
+- {id: tdc-stgeorge, name: TDC, tier: core, city: St. George, lat: 37.0965, lon: -113.5684, kind: pop, confidence: inferred,
+  notes: Printed 'near St. George'; placed at St. George city center}
+- {id: utahtech-stgeorge, name: UTAH TECH UNIVERSITY, tier: core, city: St. George, lat: 37.0965, lon: -113.5684, kind: university,
+  confidence: map, notes: ''}
+- {id: ubtc-vernal, name: Uintah Basin TC Vernal, tier: core, city: Vernal, lat: 40.4555, lon: -109.5287, kind: technical_college,
+  confidence: map, notes: Northeast}
+- {id: usu-vernal, name: USU Vernal, tier: core, city: Vernal, lat: 40.4555, lon: -109.5287, kind: university, confidence: map,
+  notes: ''}
+- {id: ubtc-roosevelt, name: UINTAH BASIN TECHNICAL COLLEGE, tier: core, city: Roosevelt, lat: 40.2994, lon: -109.9888, kind: technical_college,
+  confidence: map, notes: ''}
+- {id: usu-eastern, name: USU EASTERN, tier: core, city: Price, lat: 39.5994, lon: -110.8107, kind: university, confidence: map,
+  notes: East-central}
+- {id: moab, name: MOAB, tier: core, city: Moab, lat: 38.5733, lon: -109.5498, kind: pop, confidence: map, notes: Middle of
+    the eastern 20G ring}
+- {id: sanjuan-media, name: SAN JUAN MEDIA CENTER, tier: core, city: Monticello, lat: 37.8714, lon: -109.3429, kind: pop,
+  confidence: inferred, notes: Printed near Blanding/Monticello; placed at Monticello}
+- {id: usu-blanding, name: USU BLANDING, tier: core, city: Blanding, lat: 37.6242, lon: -109.4785, kind: university, confidence: map,
+  notes: ''}
+- {id: snow-richfield, name: Snow College Richfield, tier: core, city: Richfield, lat: 38.7725, lon: -112.0841, kind: university,
+  confidence: map, notes: ''}
+- {id: swtc-cedar, name: Southwest TC, tier: core, city: Cedar City, lat: 37.6775, lon: -113.0619, kind: technical_college,
+  confidence: map, notes: ''}
+- {id: davis-tc, name: DAVIS TECHNICAL COLLEGE, tier: core, city: Kaysville, lat: 41.0352, lon: -111.9388, kind: technical_college,
+  confidence: map, notes: ''}
+- {id: ogden-weber-tc, name: Ogden-Weber TC, tier: core, city: Ogden, lat: 41.223, lon: -111.9738, kind: technical_college,
+  confidence: map, notes: ''}
+- {id: dixie-tc, name: Dixie TC, tier: core, city: St. George, lat: 37.0965, lon: -113.5684, kind: technical_college, confidence: map,
+  notes: ''}
+- {id: mountainland-tc, name: Mountainland TC, tier: core, city: Lehi, lat: 40.3916, lon: -111.8508, kind: technical_college,
+  confidence: inferred, notes: Printed near Lehi/Orem; placed at Lehi}
+- {id: tooele-tc, name: USU Tooele / Tooele TC, tier: core, city: Tooele, lat: 40.5308, lon: -112.2983, kind: technical_college,
+  confidence: map, notes: ''}
+- {id: wendover, name: WENDOVER, tier: core, city: Wendover, lat: 40.7391, lon: -114.0372, kind: pop, confidence: map, notes: 'Western
+    end, single 10G path'}
+- {id: park-city, name: PARK CITY, tier: core, city: Park City, lat: 40.6461, lon: -111.498, kind: school_district, confidence: inferred,
+  notes: Assumed entry point of the eastern Summit County area}
+- {id: cache-sd, name: CACHE SD, tier: distribution, city: Logan, lat: 41.737, lon: -111.8338, kind: school_district, confidence: map,
+  notes: ''}
+- {id: logan-sd, name: LOGAN SD, tier: distribution, city: Logan, lat: 41.737, lon: -111.8338, kind: school_district, confidence: map,
+  notes: ''}
+- {id: boxelder-sd, name: BOX ELDER SD, tier: distribution, city: Brigham City, lat: 41.5102, lon: -112.0155, kind: school_district,
+  confidence: map, notes: ''}
+- {id: btc-brigham, name: BTC Brigham City, tier: distribution, city: Brigham City, lat: 41.5102, lon: -112.0155, kind: technical_college,
+  confidence: map, notes: ''}
+- {id: rich-sd, name: RICH SD, tier: distribution, city: Randolph, lat: 41.6638, lon: -111.1791, kind: school_district, confidence: map,
+  notes: ''}
+- {id: ogden-sd, name: OGDEN SD, tier: distribution, city: Ogden, lat: 41.223, lon: -111.9738, kind: school_district, confidence: map,
+  notes: ''}
+- {id: weber-sd, name: WEBER SD, tier: distribution, city: Ogden, lat: 41.223, lon: -111.9738, kind: school_district, confidence: map,
+  notes: ''}
+- {id: morgan-sd, name: MORGAN SD, tier: distribution, city: Morgan, lat: 41.0361, lon: -111.6769, kind: school_district,
+  confidence: map, notes: ''}
+- {id: davis-sd, name: DAVIS SD, tier: distribution, city: Farmington, lat: 40.9805, lon: -111.8874, kind: school_district,
+  confidence: map, notes: ''}
+- {id: tooele-sd, name: TOOELE SD, tier: distribution, city: Tooele, lat: 40.5308, lon: -112.2983, kind: school_district,
+  confidence: map, notes: ''}
+- {id: nsummit-sd, name: N SUMMIT SD, tier: distribution, city: Coalville, lat: 40.9161, lon: -111.3997, kind: school_district,
+  confidence: map, notes: ''}
+- {id: ssummit-sd, name: S SUMMIT SD, tier: distribution, city: Kamas, lat: 40.643, lon: -111.2802, kind: school_district,
+  confidence: map, notes: ''}
+- {id: wasatch-sd, name: WASATCH SD, tier: distribution, city: Heber City, lat: 40.507, lon: -111.413, kind: school_district,
+  confidence: map, notes: ''}
+- {id: alpine-sd, name: ALPINE SD, tier: distribution, city: American Fork, lat: 40.3769, lon: -111.7958, kind: school_district,
+  confidence: map, notes: ''}
+- {id: provo-sd, name: PROVO SD, tier: distribution, city: Provo, lat: 40.2338, lon: -111.6585, kind: school_district, confidence: map,
+  notes: ''}
+- {id: nebo-sd, name: NEBO SD, tier: distribution, city: Spanish Fork, lat: 40.115, lon: -111.6549, kind: school_district,
+  confidence: map, notes: ''}
+- {id: juab-sd, name: JUAB SD, tier: distribution, city: Nephi, lat: 39.7102, lon: -111.8363, kind: school_district, confidence: map,
+  notes: ''}
+- {id: tintic-sd, name: TINTIC SD, tier: distribution, city: Eureka, lat: 39.9569, lon: -112.1236, kind: school_district,
+  confidence: map, notes: ''}
+- {id: nsanpete-sd, name: N SANPETE SD, tier: distribution, city: Mt. Pleasant, lat: 39.5469, lon: -111.4547, kind: school_district,
+  confidence: map, notes: ''}
+- {id: snow-ephraim, name: SNOW COLLEGE, tier: distribution, city: Ephraim, lat: 39.3597, lon: -111.5863, kind: university,
+  confidence: map, notes: ''}
+- {id: ssanpete-sd, name: S SANPETE SD, tier: distribution, city: Manti, lat: 39.2677, lon: -111.6355, kind: school_district,
+  confidence: map, notes: ''}
+- {id: sevier-sd, name: SEVIER SD, tier: distribution, city: Richfield, lat: 38.7725, lon: -112.0841, kind: school_district,
+  confidence: map, notes: ''}
+- {id: piute-sd, name: PIUTE SD, tier: distribution, city: Junction, lat: 38.2372, lon: -112.22, kind: school_district, confidence: map,
+  notes: ''}
+- {id: wayne-sd, name: WAYNE SD, tier: distribution, city: Loa, lat: 38.4033, lon: -111.6419, kind: school_district, confidence: map,
+  notes: ''}
+- {id: garfield-sd, name: GARFIELD SD, tier: distribution, city: Panguitch, lat: 37.8222, lon: -112.4358, kind: school_district,
+  confidence: map, notes: ''}
+- {id: beaver-sd, name: BEAVER SD, tier: distribution, city: Beaver, lat: 38.2769, lon: -112.6411, kind: school_district,
+  confidence: map, notes: ''}
+- {id: millard-sd, name: MILLARD SD, tier: distribution, city: Delta, lat: 39.3522, lon: -112.5772, kind: school_district,
+  confidence: map, notes: ''}
+- {id: iron-sd, name: IRON SD, tier: distribution, city: Cedar City, lat: 37.6775, lon: -113.0619, kind: school_district,
+  confidence: map, notes: ''}
+- {id: washington-sd, name: WASHINGTON SD, tier: distribution, city: St. George, lat: 37.0965, lon: -113.5684, kind: school_district,
+  confidence: map, notes: ''}
+- {id: kane-sd, name: KANE SD, tier: distribution, city: Kanab, lat: 37.0475, lon: -112.5263, kind: school_district, confidence: map,
+  notes: ''}
+- {id: duchesne-sd, name: DUCHESNE SD, tier: distribution, city: Duchesne, lat: 40.1636, lon: -110.4029, kind: school_district,
+  confidence: map, notes: ''}
+- {id: uintah-sd, name: UINTAH SD, tier: distribution, city: Vernal, lat: 40.4555, lon: -109.5287, kind: school_district,
+  confidence: map, notes: ''}
+- {id: daggett-sd, name: DAGGETT SD, tier: distribution, city: Manila, lat: 40.9855, lon: -109.7237, kind: school_district,
+  confidence: map, notes: ''}
+- {id: carbon-sd, name: CARBON SD, tier: distribution, city: Price, lat: 39.5994, lon: -110.8107, kind: school_district, confidence: map,
+  notes: ''}
+- {id: emery-sd, name: EMERY SD, tier: distribution, city: Castle Dale, lat: 39.2111, lon: -111.0178, kind: school_district,
+  confidence: map, notes: ''}
+- {id: grand-sd, name: GRAND SD, tier: distribution, city: Moab, lat: 38.5733, lon: -109.5498, kind: school_district, confidence: map,
+  notes: ''}
+- {id: sanjuan-sd, name: SAN JUAN SD, tier: distribution, city: Blanding, lat: 37.6242, lon: -109.4785, kind: school_district,
+  confidence: map, notes: ''}
