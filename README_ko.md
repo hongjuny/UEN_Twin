@@ -24,6 +24,8 @@ uv run uetn-twin report --spof            # 단일 장애점 보고서
 uv run python scripts/screenshot.py       # 스크린샷 재현 (최초 1회 uv run playwright install chromium)
 ```
 
+실행 결과는 `outputs/`에 저장됩니다. 다른 곳에 두려면 `UETN_TWIN_OUTPUTS=/경로`를 설정하세요(클라우드 동기화 폴더는 피하세요. 특히 라이브 모드).
+
 ## 전체 피크 수요 가정
 
 **전체 피크 수요 가정: 223.3 Gbps (UETN 확인 필요).** (v1-platform 이전에는 의료 사이트를 200 Mbps로 가정해 258.6 Gbps였음, docs/DATA_PROVENANCE.md 참고)

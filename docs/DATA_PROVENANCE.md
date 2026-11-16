@@ -121,10 +121,24 @@ Peak utilization of the eastern gateway (uvu-orem--uvu-wasatch) over a weekday, 
 
 With the gateway at 20G the default factors gave 140%. Under the defaults every other link peaks at 54% or less.
 
+## v1-platform traffic model (all assumed)
+
+Parameters live in data/traffic/classes.yaml, data/regions.yaml and data/scenarios/*.yaml.
+
+- **Six traffic classes** (k12_instruction, general_internet, streaming, telehealth, research_bulk, transactional) split each site type's v0 peak demand: K-12 80/10/10 (instruction/general/streaming); higher-ed 50/30/15/5 (general/streaming/research/transactional); healthcare 30/70 (telehealth/general). Each class has its own hourly curve.
+- **Endpoints:** internet exit slc-level3; research (Internet2) exit also slc-level3; CDN cache slc-ddc serving 60% of streaming; telehealth hub slc-uofu; half of transactional clients come from outside the network via the exit.
+- **Direction:** share of each class flowing toward the node that owns the demand (K-12 0.9, general 0.8, streaming 0.95, telehealth and research 0.5, transactional requests 0.3). Link capacity is the same in both directions (full duplex).
+- **Server sessions** count only the server side of transactional traffic (sessions_per_gbps 50,000); telehealth sessions are recorded separately without a capacity check. Session capacity by node kind: university 200,000; technical college 25,000; datacenter 50,000; school district 100,000; PoP 2,000,000.
+- **Stochastic layers:** Ornstein-Uhlenbeck regional wander (time constant 30-120 min, sigma 10-15%, regional correlation 0.6; a region is a core PoP with the distribution nodes nearest to it); Poisson bursts (lognormal size relative to the node's class peak, 1-10 min); fast AR(1) noise (coefficient 0.7) with sigma = 2% x sqrt(10 Gbps / volume) clipped to 1-15% (for transactional the reference is 10,000 sessions).
+- **Transactional schedule:** half of transactional bursts fall in class-change windows (:50 to :05 around each hour, 08:00-17:00); the transactional hourly level never drops below 5% of its peak (servers are never empty at night).
+- **Drop and latency:** traffic above capacity is dropped at each flow's bottleneck link; utilization is offered load; latency uses a rough M/M/1-like factor and is indicative only.
+- **Scenario sizes** (registration peak_x 25, research transfers 15-60 Gbps, streaming x1.8, K-12 testing x1.6) are demonstration assumptions.
+
 ## Changes to assumptions
 
 - **v1-platform (2026-11-16): healthcare unit demand 200 -> 100 Mbps per site.** With the v1 traffic classes, healthcare demand had been classified entirely as telehealth video and came out as the largest class (70.5 Gbps), which an operator would find implausible. Most hospital and clinic traffic is electronic health records, cloud and web; many sites are small clinics. Healthcare demand is now split 30% telehealth / 70% general_internet (data/traffic/classes.yaml) and the unit demand was halved. Total v0 peak demand assumption: 258.6 -> 223.3 Gbps. The concurrency factor (0.5) is unchanged.
 - **v1-platform: higher_ed_general renamed general_internet** and also used by K-12 (10%) and healthcare (70%).
+- **v1-platform stage 2 review: technical-college session capacity 20,000 -> 25,000.** With bursts and noise the 99th percentile of 30 s server-session averages in a 24 h baseline_weekday run reached 44% at tooele-tc; the target for a normal day is <= 40% everywhere. After the change the highest p99 is 37% (slc-uofu, university) and 35% (tooele-tc). University and datacenter capacities were already within the target and are unchanged.
 
 ## Questions for UETN
 
@@ -141,3 +155,8 @@ With the gateway at 20G the default factors gave 140%. Under the defaults every 
 11. Attach points of davis-tc, ogden-weber-tc, mountainland-tc, snow-richfield (not in the work order's link table; added to avoid isolated nodes).
 12. Where do iron-sd's two connections (suu-cedar 10G, tdc 100G) actually terminate?
 13. How many Idaho/Wyoming telehealth sites does UETN serve, and where do they connect?
+14. What is the real share of telehealth (video and records) in UETN traffic? The model has 5.6% at a weekday 10:00.
+15. Where are CDN cache servers (Netflix, Google, Akamai, ...) inside the network, and what share of streaming do they serve? The model assumes one cache at DDC serving 60%.
+16. Does residence-hall (dorm) traffic cross UETN, or do campuses use a separate commercial provider for it?
+17. Where does research traffic leave for Internet2, and is it the same point as the commodity internet exit?
+18. What concurrent-session capacity do campus registration/login systems and firewalls have (per campus)?

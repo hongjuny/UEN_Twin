@@ -27,7 +27,7 @@ uv run uetn-twin simulate --hours 24
 uv run streamlit run dashboard/app.py
 ```
 
-Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+. The map loads some geography data from the internet.
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+. Run outputs go to `outputs/`; set `UETN_TWIN_OUTPUTS=/some/local/dir` to write them elsewhere (keep them out of cloud-synced folders, especially for live mode).
 
 | Command | What it does |
 |---|---|
