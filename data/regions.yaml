@@ -1,0 +1,10 @@
+# Regions for scenario selectors (region:<name>). Listed by CORE node; every distribution node belongs to the
+# region of its nearest core node (by hops). Every core node is in exactly one region. Grouping is assumed.
+confidence: assumed
+regions:
+  wasatch_front: [slc-level3, slc-slcc, slc-ddc, slc-uofu, wsu-ogden, ogden-weber-tc, davis-tc, uvu-orem,
+                  mountainland-tc, park-city]
+  northern: [usu-logan, btc-logan]
+  eastern_ring: [uvu-wasatch, ubtc-roosevelt, ubtc-vernal, usu-vernal, usu-eastern, moab, sanjuan-media, usu-blanding]
+  southern: [richfield-dc, snow-richfield, suu-cedar, swtc-cedar, tdc-stgeorge, utahtech-stgeorge, dixie-tc]
+  west_desert: [wendover, tooele-tc]

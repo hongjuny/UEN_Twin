@@ -42,6 +42,27 @@ class Wander(_Strict):
     sigma: float = Field(ge=0, lt=1, description="Typical relative size of the fluctuation (0.15 = +/-15%)")
 
 
+class BurstSchedule(_Strict):
+    """Part of the bursts tied to recurring windows around the hour (class changes)."""
+
+    share: float = Field(ge=0, le=1, description="Fraction of all bursts that fall inside the windows")
+    first_hour: int = Field(ge=0, le=23)
+    last_hour: int = Field(ge=0, le=23)
+    minutes_before: float = Field(ge=0, lt=60)
+    minutes_after: float = Field(ge=0, lt=60)
+
+    def window_hours(self) -> float:
+        return (self.last_hour - self.first_hour + 1) * (self.minutes_before + self.minutes_after) / 60
+
+    def inside(self, t: datetime) -> bool:
+        m = t.minute + t.second / 60
+        if m >= 60 - self.minutes_before:
+            return self.first_hour <= t.hour + 1 <= self.last_hour
+        if m < self.minutes_after:
+            return self.first_hour <= t.hour <= self.last_hour
+        return False
+
+
 class Bursts(_Strict):
     """Short extra demand: Poisson arrivals, lognormal size relative to the node's class peak."""
 
@@ -50,6 +71,29 @@ class Bursts(_Strict):
     sigma_log: float = Field(ge=0, description="Spread of burst sizes (lognormal sigma)")
     min_minutes: float = Field(gt=0)
     max_minutes: float = Field(gt=0)
+    schedule: BurstSchedule | None = None
+
+    def rate_at(self, t: datetime) -> float:
+        """Arrival rate per second at time t (random part plus scheduled windows, same daily expected count)."""
+        per_s = self.rate_per_hour / 3600.0
+        if self.schedule is None:
+            return per_s
+        sch = self.schedule
+        rate = per_s * (1 - sch.share)
+        if sch.inside(t):
+            rate += per_s * sch.share * 24 / sch.window_hours()
+        return rate
+
+
+class FastNoise(_Strict):
+    """Per-tick multiplicative AR(1) noise whose size shrinks with the square root of the volume."""
+
+    ar_coefficient: float = Field(ge=0, lt=1)
+    sigma_ref: float = Field(ge=0)
+    ref_gbps: float = Field(gt=0)
+    ref_sessions: float = Field(gt=0)
+    min_sigma: float = Field(ge=0)
+    max_sigma: float = Field(ge=0, lt=1)
 
 
 class ClassSpec(_Strict):
@@ -62,6 +106,7 @@ class ClassSpec(_Strict):
     priority: int = Field(ge=1, le=5, description="1 = highest; used by intervention tools later")
     mesh_share: float = Field(default=0.5, ge=0, le=1)
     client_exit_share: float = Field(default=0.5, ge=0, le=1)
+    floor: float = Field(default=0.0, ge=0, le=1, description="Lowest hourly level (fraction of peak)")
     wander: Wander
     bursts: Bursts
     hourly: dict[str, list[float]]
@@ -83,6 +128,7 @@ class TrafficClasses(_Strict):
     cdn_share: float = Field(ge=0, le=1)
     hospital_nodes: list[str]
     regional_correlation: float = Field(ge=0, le=1, description="How strongly nodes of one region move together")
+    fast_noise: FastNoise
     day_of_week_factor: list[float] = Field(min_length=7, max_length=7, description="Monday..Sunday multipliers")
     server_session_class: str = Field(description="Class whose sessions load the server side (registration, logins)")
     tracked_session_classes: list[str] = Field(default_factory=list, description="Sessions recorded, not capacity-checked")
@@ -152,8 +198,12 @@ def baseline_volumes(topo: Topology, tc: TrafficClasses, mode: str, t: datetime)
     """class -> node -> deterministic volume at time t under an academic mode (weekday_semester / weekend / break)."""
     peaks = class_peaks(topo, tc)
     dow = tc.day_of_week_factor[t.weekday()]
-    return {name: {n: v * dow * curve_value(tc.classes[name].hourly[mode], t) for n, v in peaks[name].items()}
+    return {name: {n: v * dow * class_level(tc.classes[name], mode, t) for n, v in peaks[name].items()}
             for name in tc.names}
+
+
+def class_level(spec: ClassSpec, mode: str, t: datetime) -> float:
+    return max(curve_value(spec.hourly[mode], t), spec.floor)
 
 
 @dataclass(frozen=True)
@@ -245,6 +295,19 @@ class ODMap:
         for (ci, p, n), w in coef.items():
             self.matrix[ci, pidx[p], n] = w
 
+    def add_pairs(self, pairs) -> None:
+        """Make room for extra OD pairs (e.g. scenario overlays) with zero baseline weight."""
+        have = set(self.pairs)
+        new = sorted(p for p in pairs if p not in have)
+        if not new:
+            return
+        for a, b in new:
+            if a not in self.node_idx or b not in self.node_idx:
+                raise ValueError(f"unknown node in pair {(a, b)}")
+        self.pairs = self.pairs + tuple(new)
+        pad = np.zeros((len(self.classes), len(new), len(self.node_ids)))
+        self.matrix = np.concatenate([self.matrix, pad], axis=1)
+
     def volumes_array(self, volumes: dict[str, dict[str, float]]) -> np.ndarray:
         v = np.zeros((len(self.classes), len(self.node_ids)))
         for ci, name in enumerate(self.classes):
@@ -287,7 +350,10 @@ class TrafficGenerator:
     2. wander: exp(sigma * x - sigma^2 / 2) with x a unit-variance Ornstein-Uhlenbeck mix of a regional factor
        (shared by a core PoP and its distribution nodes) and a node factor; corr(regional) = regional_correlation
     3. bursts: Poisson arrivals per (class, node); size = lognormal x class peak x current hourly level; flat for a
-       uniform 1-10 min duration
+       uniform 1-10 min duration; part of a class's bursts can be tied to recurring windows (class changes)
+    4. fast noise: multiplicative AR(1) per (class, node) every tick, sigma = sigma_ref x sqrt(ref / volume)
+       (Gbps, or sessions for the server-session class), clipped; aggregation then makes big links smooth and
+       small links jittery, as in real telemetry
 
     Every draw comes from one numpy Generator, so the same seed reproduces the same traffic.
     """
@@ -306,18 +372,26 @@ class TrafficGenerator:
         self.z_region = rng.standard_normal((c, len(names)))
         self.z_node = rng.standard_normal((c, n))
         b = [tc.classes[k].bursts for k in self.classes]
-        self.burst_rate = np.array([x.rate_per_hour for x in b]) / 3600.0
         self.burst_median = np.array([x.median_fraction for x in b])
         self.burst_sigma = np.array([x.sigma_log for x in b])
         self.burst_min = np.array([x.min_minutes for x in b]) * 60
         self.burst_max = np.array([x.max_minutes for x in b]) * 60
+        self.burst_specs = b
         self._bursts = np.zeros((0, 4))  # rows: end_s, class, node, gbps
         self.active = self.peaks > 0
+        fn = tc.fast_noise
+        self.noise = fn
+        self.noise_u = rng.standard_normal((c, n))
+        server = self.classes.index(tc.server_session_class)
+        self.noise_ref = np.full(c, fn.ref_gbps)
+        self.noise_ref[server] = fn.ref_sessions
+        self.noise_scale = np.ones(c)  # volume -> reference unit (Gbps or sessions)
+        self.noise_scale[server] = tc.classes[tc.server_session_class].sessions_per_gbps
 
     def level(self, t: datetime) -> np.ndarray:
         """(C,) hourly curve x day-of-week at t."""
         dow = self.tc.day_of_week_factor[t.weekday()]
-        return np.array([dow * curve_value(self.tc.classes[k].hourly[self.mode], t) for k in self.classes])
+        return np.array([dow * class_level(self.tc.classes[k], self.mode, t) for k in self.classes])
 
     def baseline(self, t: datetime) -> np.ndarray:
         return self.peaks * self.level(t)[:, None]
@@ -334,7 +408,8 @@ class TrafficGenerator:
         level = self.level(t)
         base = self.peaks * level[:, None]
 
-        arrivals = self.rng.poisson(self.burst_rate[:, None] * dt_s * self.active)
+        rates = np.array([bs.rate_at(t) for bs in self.burst_specs])
+        arrivals = self.rng.poisson(rates[:, None] * dt_s * self.active)
         ci, ni = np.nonzero(arrivals)
         if len(ci):
             reps = arrivals[ci, ni]
@@ -347,4 +422,11 @@ class TrafficGenerator:
         burst = np.zeros_like(base)
         if len(self._bursts):
             np.add.at(burst, (self._bursts[:, 1].astype(int), self._bursts[:, 2].astype(int)), self._bursts[:, 3])
-        return base * wander + burst, burst
+        v = base * wander + burst
+        fn = self.noise
+        phi = fn.ar_coefficient
+        self.noise_u = phi * self.noise_u + np.sqrt(1 - phi * phi) * self.rng.standard_normal(self.noise_u.shape)
+        amount = np.maximum(v * self.noise_scale[:, None], 1e-12)
+        sigma = np.clip(fn.sigma_ref * np.sqrt(self.noise_ref[:, None] / amount), fn.min_sigma, fn.max_sigma)
+        v = v * np.maximum(1 + sigma * self.noise_u, 0)
+        return v, burst

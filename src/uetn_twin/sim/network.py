@@ -89,6 +89,14 @@ class DirectedFlowBackend(FlowBackend):
             self._dcache.clear()
         self._od = od
 
+    def unreachable_now(self) -> list[str]:
+        """Nodes cut off from the internet exit with the current link states."""
+        g = self._graph.copy()
+        g.remove_edges_from([(ln.a, ln.b) for ln in self._links if ln.id in self._down])
+        exit_node = self.topo.profile.internet_exit_node
+        connected = nx.node_connected_component(g, exit_node) if exit_node in g else set()
+        return sorted(n for n in g.nodes if n not in connected)
+
     def _directed_routing(self):
         key = frozenset(self._down)
         if key not in self._dcache:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -18,7 +19,8 @@ from .traffic import add_noise, build_peak_matrix, hourly_factor, node_peak_dema
 
 # Gateway of the eastern 20G ring: the whole ring hangs off this one link, so it is a modeled bottleneck.
 EAST_GATEWAY = "uvu-orem--uvu-wasatch"
-DEFAULT_OUT = Path(__file__).resolve().parents[2] / "outputs"
+# Override with UETN_TWIN_OUTPUTS to keep run outputs outside the project (e.g. away from a synced folder).
+DEFAULT_OUT = Path(os.environ.get("UETN_TWIN_OUTPUTS", Path(__file__).resolve().parents[2] / "outputs"))
 DEFAULT_START = datetime(2026, 11, 16, 0, 0)  # a Monday
 
 

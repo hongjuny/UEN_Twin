@@ -13,6 +13,19 @@ hospital_nodes: [slc-uofu]       # telehealth hub (University of Utah Health, as
 regional_correlation: 0.6        # nodes of one region (a core PoP and the distribution nodes under it) move together
 day_of_week_factor: [1.0, 1.0, 1.0, 1.0, 0.92, 1.0, 1.0]   # Monday..Sunday; weekends use the weekend curves
 
+# Fast noise (stage 2 review): small multiplicative AR(1) noise on every (class, node) volume at every tick.
+# Its size follows aggregation: many independent flows average out, so relative jitter shrinks with the square root
+# of the volume: sigma = sigma_ref x sqrt(ref / volume), clipped to [min_sigma, max_sigma]. The reference is Gbps
+# for most classes and the session count for the server-session class. Big backbone links end up at about 1-2%,
+# a small 1G link at about 10%. All assumed.
+fast_noise:
+  ar_coefficient: 0.7        # memory of a few tens of seconds at a 10 s tick
+  sigma_ref: 0.02
+  ref_gbps: 10
+  ref_sessions: 10000
+  min_sigma: 0.01
+  max_sigma: 0.15
+
 # Sessions: only the server side of this class is compared with node session capacity (registration, logins).
 server_session_class: transactional
 tracked_session_classes: [telehealth]   # recorded separately, no capacity comparison
@@ -24,13 +37,13 @@ site_mix:
   healthcare: {telehealth: 0.3, general_internet: 0.7}   # most clinic traffic is records, cloud and web, not video
 
 # Concurrent server-side sessions each node can handle (registration/login servers, firewalls), by node kind.
-# Calibrated so that the weekday-semester peak is roughly 20-30% for the large campuses (normal baseline);
-# smaller campuses sit lower. Per-node overrides below.
+# Calibrated on the normal baseline: deterministic weekday-semester peak roughly 20-30% for the large campuses,
+# and the 99th percentile of 30 s averages in a 24 h baseline_weekday run (with bursts and noise) <= 40% everywhere. Per-node overrides below.
 session_capacity_by_kind:
   pop: 2000000
   datacenter: 50000
   university: 200000
-  technical_college: 20000
+  technical_college: 25000      # raised from 20000 so the stochastic p99 stays <= 40% (stage 2 review)
   school_district: 100000
   healthcare: 50000
   other: 50000
@@ -48,6 +61,7 @@ session_capacity_by_node: {}
 # sessions_per_gbps: concurrent connections per Gbps of traffic (small for big flows, huge for short requests).
 # priority: 1 (highest) .. 5, used by intervention tools later.
 # wander: regional mean-reverting fluctuation (tau = how long a deviation lasts, sigma = typical relative size).
+# floor: lowest level of the hourly curve (fraction of peak), default 0.
 # bursts: short extra demand; Poisson arrivals per node, lognormal size as a fraction of the node's class peak,
 #         duration uniform between min and max minutes.
 # hourly: multiplier on the class peak by hour (0..23), linearly interpolated, per academic mode.
@@ -117,11 +131,19 @@ classes:
     description: Short requests (course registration, logins, payments); tiny bandwidth, many sessions
     pattern: clients_to_server
     client_exit_share: 0.5
+    floor: 0.05              # servers never empty: night level is at least 5% of the daytime peak (assumed)
     toward_node_share: 0.3
     sessions_per_gbps: 50000
     priority: 2
     wander: {tau_minutes: 30, sigma: 0.15}
-    bursts: {rate_per_hour: 0.5, median_fraction: 0.3, sigma_log: 0.5, min_minutes: 1, max_minutes: 10}
+    bursts:
+      rate_per_hour: 0.5
+      median_fraction: 0.3
+      sigma_log: 0.5
+      min_minutes: 1
+      max_minutes: 10
+      # about half of the bursts fall in class-change windows (:50 to :05 around each hour from 08:00 to 17:00)
+      schedule: {share: 0.5, first_hour: 8, last_hour: 17, minutes_before: 10, minutes_after: 5}
     hourly:
       weekday_semester: [.05, .03, .02, .02, .02, .03, .1, .4, .9, 1, 1, 1, 1, 1, 1, 1, .9, .7, .6, .6, .55, .45, .3, .1]
       weekend: [.05, .03, .02, .02, .02, .02, .04, .08, .15, .25, .3, .3, .3, .3, .3, .3, .3, .3, .3, .3, .25, .2, .15, .08]

@@ -137,8 +137,6 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Batch-run a v1 scenario on the SimPy clock and print a short summary."""
-    import sqlite3
-
     import pandas as pd
 
     from .sim.runner import SimRun
@@ -147,25 +145,30 @@ def cmd_run(args: argparse.Namespace) -> int:
     if _load_or_exit(args.data) is None:
         return 1
     run = SimRun(load_scenario(args.scenario), seed=args.seed, tick_s=args.tick, telemetry_s=args.telemetry_interval,
-                 out_base=Path(args.out))
+                 out_base=Path(args.out), keep_sqlite=args.keep_sqlite)
     out = run.run()
-    conn = sqlite3.connect(out / "telemetry.sqlite")
-    tot = pd.read_sql("SELECT * FROM totals", conn)
-    top = pd.read_sql("SELECT link_id, from_node, to_node, MAX(utilization) AS peak FROM link_telemetry "
-                      "GROUP BY link_id, from_node, to_node ORDER BY peak DESC LIMIT 10", conn)
-    sess = pd.read_sql("SELECT node_id, MAX(session_utilization) AS peak FROM node_telemetry "
-                       "GROUP BY node_id ORDER BY peak DESC LIMIT 5", conn)
-    conn.close()
+    tot = pd.read_parquet(out / "totals.parquet")
+    links = pd.read_parquet(out / "link_telemetry.parquet")
+    nodes = pd.read_parquet(out / "node_telemetry.parquet")
+    top = links.groupby("direction").utilization.max().sort_values(ascending=False).head(10)
+    over = links[links.utilization > 1.0].groupby("direction").sim_s.agg(["min", "max", "count"])
+    sess = nodes.groupby("node_id").session_utilization.max().sort_values(ascending=False).head(5)
+    size = sum(f.stat().st_size for f in out.iterdir()) / 1e6
     print(f"SIMULATED scenario '{run.scenario.id}' (seed {run.seed}): {run.ticks} ticks of {args.tick:g} s, "
-          f"telemetry every {args.telemetry_interval:g} s, wall time {run.summary['wall_seconds']} s")
+          f"wall time {run.summary['wall_seconds']} s, output {size:.1f} MB")
     print(f"Mean offered {tot.generated_gbps.mean():.1f} Gbps, peak interval {tot.generated_gbps.max():.1f} Gbps; "
-          f"dropped {tot.dropped_gbps.sum() * args.telemetry_interval / 8:.1f} GB total")
+          f"dropped {tot.dropped_gbps.sum() * args.telemetry_interval / 8:.1f} GB in total")
     print("\nPeak utilization by direction (interval averages, offered load):")
-    for r in top.itertuples():
-        print(f"  {r.from_node} -> {r.to_node:28s} {r.peak:6.1%}")
+    for d, u in top.items():
+        print(f"  {d:46s} {u:6.1%}")
+    print("\nDirections above 100% (simulated times):")
+    for d, r in over.iterrows():
+        print(f"  {d:46s} {run._ts(r['min'])[11:16]}-{run._ts(r['max'])[11:16]} ({int(r['count'])} intervals)")
+    if over.empty:
+        print("  none")
     print("\nPeak server-session utilization:")
-    for r in sess.itertuples():
-        print(f"  {r.node_id:20s} {r.peak:6.1%}")
+    for n, u in sess.items():
+        print(f"  {n:20s} {u:6.1%}")
     print(f"\nWrote {out}")
     return 0
 
@@ -188,6 +191,7 @@ def main(argv: list[str] | None = None) -> int:
     rr.add_argument("--seed", type=int, default=None, help="override the scenario seed")
     rr.add_argument("--tick", type=float, default=10, help="traffic tick in simulated seconds")
     rr.add_argument("--telemetry-interval", type=float, default=30, help="averaging interval in simulated seconds")
+    rr.add_argument("--keep-sqlite", action="store_true", help="keep telemetry.sqlite next to the Parquet files")
     rr.add_argument("--data", default=str(topology.DEFAULT_DIR))
     rr.add_argument("--out", default=str(engine.DEFAULT_OUT))
     rr.set_defaults(func=cmd_run)
