@@ -19,7 +19,9 @@ export UV_PROJECT_ENVIRONMENT=~/.venvs/uetn-twin
 uv sync
 uv run uetn-twin validate                 # 데이터 검증
 uv run uetn-twin simulate --hours 24      # 평상시 하루 계산, outputs/run_*/snapshots.parquet
-uv run streamlit run dashboard/app.py     # 대시보드
+uv run uetn-twin run baseline_weekday    # 시나리오 배치 실행 (v1)
+uv run uetn-twin live <시나리오> --speed 60   # 라이브 실행 (시뮬레이션 1분 = 실제 1초)
+uv run streamlit run dashboard/app.py     # 대시보드 (사이드바에서 Replay / Live)
 uv run uetn-twin report --spof            # 단일 장애점 보고서
 uv run python scripts/screenshot.py       # 스크린샷 재현 (최초 1회 uv run playwright install chromium)
 ```
@@ -53,6 +55,34 @@ uv run python scripts/screenshot.py       # 스크린샷 재현 (최초 1회 uv 
 `uetn-twin report --spof`는 링크 하나가 끊겼을 때 (1) 인터넷 출구에서 끊기는 노드 수, (2) 영향받는 학교·병원 수,
 (3) 우회 후 이용률 1.0을 넘는 다른 링크 수(평일 피크 기준)를 보여줍니다. 출력 예시는 [README.md](README.md)에 있고,
 세 번째 열이 0이 아닌 링크는 v1 시나리오의 1순위 후보입니다.
+
+## 시나리오
+
+시나리오는 평상시 하루(기본 프로파일) 위에 "상황"을 겹쳐 얹은 것입니다. 오버레이(특정 노드의 한 트래픽 클래스를 바꿈)와
+이벤트(링크 끊김/복구)로 구성됩니다. 모든 값은 시뮬레이션이며 크기는 가정입니다.
+`uetn-twin run <시나리오>`는 끝까지 빠르게 돌려 `outputs/`에 텔레메트리(Parquet)와 `run_meta.json`을 저장합니다.
+
+| id | 상황 |
+|---|---|
+| `baseline_weekday` | 학기 중 평범한 평일. 지역별 흔들림과 짧은 버스트가 보임 |
+| `semester_registration_monday` | 07:00 UVU·U of U 수강신청 오픈(U of U 세션 초과), 08:30부터 USU→DDC AI 학습 전송 30 Gbps |
+| `weekend_dorm_streaming` | 토요일 저녁 기숙사 스트리밍. SLC(출구·캐시)에서 캠퍼스 방향으로 흐름 |
+| `ai_training_campaign` | 평일 여러 대학의 대형 학습 전송. 400G 코어는 흡수하고 위험은 가장자리에 있음 |
+| `statewide_k12_testing` | 수요일 오전 주 전체 온라인 평가. 모든 학군 노드가 함께 상승 |
+
+## 라이브 모드
+
+> 출력 폴더는 **OneDrive/Dropbox 밖**에 두세요(`export UETN_TWIN_OUTPUTS=~/uetn_outputs`). 클라우드 동기화 폴더에서는
+> SQLite WAL이 `disk I/O error`로 실패합니다. 지도 윤곽은 `dashboard/static/`에서 제공하므로 인터넷 없이도 그려집니다.
+
+```bash
+uv run uetn-twin live semester_registration_monday --speed 60    # 시뮬레이션 1분 = 실제 1초
+uv run streamlit run dashboard/app.py                            # 사이드바에서 "Live" 선택
+```
+
+시뮬레이터가 `telemetry.sqlite`(WAL)에 쓰는 동안 대시보드가 2.5초마다 읽어 갱신합니다. Ctrl-C로 멈추면 그때까지의
+기록이 저장됩니다. 상단의 `SIMULATED` 배지는 항상 표시됩니다. 링크 색은 두 방향 중 큰 이용률, 노드 테두리 색은
+서버 세션 부하입니다. `?run=<시나리오>&t=HH:MM&node=<id>`로 특정 화면을 바로 열 수 있습니다.
 
 ## 범위
 

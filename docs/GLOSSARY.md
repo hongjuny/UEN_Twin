@@ -43,3 +43,16 @@ Network terms used in the code and documents, in plain language.
 | **Containerlab / ns-3** | Higher-fidelity network emulators/simulators. Possible future backends; not used in v0. |
 | **gNMI** | A standard interface for reading and changing router state; a future Containerlab backend would use it. |
 | **Confidence (`map` / `inferred` / `assumed`)** | How a data value was obtained: read from the map, reasonably deduced from it, or assumed because the map does not show it. |
+| **Elephant flow** | A long-lived, very large transfer between two points (here the `research_bulk` class: AI/ML training data, checkpoints). A few of them can fill a link that thousands of ordinary flows barely touch. |
+| **Session (concurrent sessions)** | One open connection between a user and a server. Registration and login systems are limited by how many sessions servers and firewalls can hold, not by bandwidth, so the model tracks sessions per node next to Gbps. |
+| **Full duplex** | A link carries its full capacity in both directions at once. Utilization is therefore computed per direction (A to B and B to A). |
+| **Direction (downstream / upstream)** | Downstream is traffic toward the campus or school (video, web pages); upstream is toward the internet. The map colors a link by its busier direction. |
+| **CDN cache** | A server inside the network that keeps popular content (e.g. Netflix or YouTube video) so it does not have to cross the internet exit each time. Assumed at DDC, serving 60% of streaming. |
+| **OU process (Ornstein-Uhlenbeck)** | A random wiggle that is pulled back toward its average. Used for the slow regional ups and downs of demand (about 30 minutes to 2 hours). |
+| **Burst** | A short surge of traffic (1 to 10 minutes) arriving at random times. |
+| **Offered load** | The traffic that wants to cross a link, before anything is dropped. Utilization above 100% means offered load exceeds capacity. |
+| **Drop** | Traffic that does not fit on a link and is discarded. Recorded as `dropped_gbps`. |
+| **Telemetry (interval average)** | Measurements a device reports every period. Like real equipment, the twin records the average over the interval, not an instantaneous value. |
+| **Tick** | One step of the simulation clock (10 simulated seconds). |
+| **Live mode / speed** | The simulation paced to the wall clock. At speed 60 one simulated minute passes per real second. |
+| **WAL (SQLite)** | A SQLite mode that lets one program write while another reads; the simulator writes telemetry while the dashboard follows it. |

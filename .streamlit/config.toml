@@ -1,2 +1,5 @@
 [browser]
 gatherUsageStats = false
+
+[server]
+enableStaticServing = true  # dashboard/static holds the map outline (works without internet)

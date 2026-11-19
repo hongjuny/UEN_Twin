@@ -100,14 +100,46 @@ Links whose failure overloads other links after rerouting (v1 scenario candidate
 Links already above 100% without any failure (excluded from the overload column): none
 ```
 
+## Scenarios
+
+A scenario is a normal day (base profile) with a situation laid over it: overlays that change one traffic class for
+some nodes, and optional events (link up/down). Everything is SIMULATED and every size is an assumption.
+`uetn-twin run <scenario>` runs one as fast as possible and writes `run_meta.json`, `link_telemetry.parquet`,
+`link_class_telemetry.parquet`, `node_telemetry.parquet`, `totals.parquet` and `events.parquet` under `outputs/`.
+
+| id | Situation |
+|---|---|
+| `baseline_weekday` | An ordinary semester weekday with regional wiggle and short bursts. |
+| `semester_registration_monday` | 07:00 registration opens at UVU and U of U (session overload at U of U); from 08:30 USU sends 30 Gbps of AI training data to DDC. |
+| `weekend_dorm_streaming` | Saturday evening: residence-hall streaming flows from SLC (exit and cache) to campuses. |
+| `ai_training_campaign` | Several universities run large training transfers on a weekday; the 400G core absorbs them, the edges are the risk. |
+| `statewide_k12_testing` | Wednesday morning online assessments: all district nodes rise together. |
+
+## Live mode
+
+```bash
+uv run uetn-twin live semester_registration_monday --speed 60    # one simulated minute per real second
+uv run streamlit run dashboard/app.py                            # choose "Live" in the sidebar
+```
+
+The simulator writes telemetry to `telemetry.sqlite` (WAL) while the dashboard reads it and refreshes every 2.5 s.
+Ctrl-C stops the run and keeps what was recorded. When the run ends the SQLite file stays next to the Parquet export.
+
+Keep the output folder **outside OneDrive/Dropbox** (`export UETN_TWIN_OUTPUTS=~/uetn_outputs`): SQLite's WAL mode fails with
+`disk I/O error` on cloud-synced folders. The dashboard works offline: the map outline is served from `dashboard/static/`.
+
 ## Dashboard
 
-The time slider moves through the simulated day; link color follows utilization (green below 60%, yellow 60-85%,
-orange 85-100%, red 100% and above); gray dotted lines mark links that are down (none in v0). Select a node in the
-sidebar or click it on the map for its sites and links. `assumed` links are drawn faded; nodes and links not read
-directly from the map are listed in the data provenance document.
+`SIMULATED` is pinned at the top. Sidebar modes: **Replay** (time slider and Play over a saved run) and **Live**
+(follows a run in progress). Link color is the busier of the two directions (green below 60%, yellow 60-85%, orange
+85-100%, red 100% and above; gray dotted = down); hovering shows both directions, drops and a rough indicative
+latency. A node outline shows server-session load in the same colors. The right side has the scenario panel
+(overlays: upcoming / active / ended), KPI tiles (total traffic, max utilization, links above 80%, dropped traffic,
+unreachable sites), the busiest link directions and a node detail. Below are rolling two-hour charts: load per
+direction of a link, what fills it by traffic class, and server sessions of a node. `?run=<scenario>&t=HH:MM&node=<id>`
+opens a specific view.
 
-![Weekday 02:00](docs/screenshots/weekday_0200.png)
+![Registration 07:10](docs/screenshots/v1/semester_registration_monday_0710_uvu-orem.png)
 
 ## Tests
 
@@ -117,7 +149,7 @@ uv run pytest
 
 Covers schema and consistency checks, routing (ECMP, reroute, unreachable), traffic conservation, the 24-hour
 simulation (including "no link above 100% at normal peak"), the SPOF report, and a dashboard smoke test (first render
-without exceptions, time handling, KPI and table logic).
+without exceptions, time handling, KPI and table logic), plus a live smoke test (a paced run followed by the dashboard).
 
 ## Scope
 

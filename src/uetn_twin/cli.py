@@ -135,18 +135,9 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_run(args: argparse.Namespace) -> int:
-    """Batch-run a v1 scenario on the SimPy clock and print a short summary."""
+def _print_run_summary(run, out: Path, tick: float, telemetry_interval: float) -> None:
     import pandas as pd
 
-    from .sim.runner import SimRun
-    from .sim.scenario import load_scenario
-
-    if _load_or_exit(args.data) is None:
-        return 1
-    run = SimRun(load_scenario(args.scenario), seed=args.seed, tick_s=args.tick, telemetry_s=args.telemetry_interval,
-                 out_base=Path(args.out), keep_sqlite=args.keep_sqlite)
-    out = run.run()
     tot = pd.read_parquet(out / "totals.parquet")
     links = pd.read_parquet(out / "link_telemetry.parquet")
     nodes = pd.read_parquet(out / "node_telemetry.parquet")
@@ -154,10 +145,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     over = links[links.utilization > 1.0].groupby("direction").sim_s.agg(["min", "max", "count"])
     sess = nodes.groupby("node_id").session_utilization.max().sort_values(ascending=False).head(5)
     size = sum(f.stat().st_size for f in out.iterdir()) / 1e6
-    print(f"SIMULATED scenario '{run.scenario.id}' (seed {run.seed}): {run.ticks} ticks of {args.tick:g} s, "
+    print(f"SIMULATED scenario '{run.scenario.id}' (seed {run.seed}): {run.ticks} ticks of {tick:g} s, "
           f"wall time {run.summary['wall_seconds']} s, output {size:.1f} MB")
     print(f"Mean offered {tot.generated_gbps.mean():.1f} Gbps, peak interval {tot.generated_gbps.max():.1f} Gbps; "
-          f"dropped {tot.dropped_gbps.sum() * args.telemetry_interval / 8:.1f} GB in total")
+          f"dropped {tot.dropped_gbps.sum() * telemetry_interval / 8:.1f} GB in total")
     print("\nPeak utilization by direction (interval averages, offered load):")
     for d, u in top.items():
         print(f"  {d:46s} {u:6.1%}")
@@ -170,6 +161,48 @@ def cmd_run(args: argparse.Namespace) -> int:
     for n, u in sess.items():
         print(f"  {n:20s} {u:6.1%}")
     print(f"\nWrote {out}")
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    """Batch-run a v1 scenario on the SimPy clock and print a short summary."""
+    from .sim.runner import SimRun
+    from .sim.scenario import load_scenario
+
+    if _load_or_exit(args.data) is None:
+        return 1
+    run = SimRun(load_scenario(args.scenario), seed=args.seed, tick_s=args.tick, telemetry_s=args.telemetry_interval,
+                 out_base=Path(args.out), keep_sqlite=args.keep_sqlite)
+    _print_run_summary(run, run.run(), args.tick, args.telemetry_interval)
+    return 0
+
+
+def cmd_live(args: argparse.Namespace) -> int:
+    """Run a scenario paced to the wall clock (SIMULATED traffic); the dashboard in Live mode follows the run."""
+    from .sim.runner import SimRun
+    from .sim.scenario import load_scenario
+
+    if _load_or_exit(args.data) is None:
+        return 1
+    if args.speed <= 0:
+        print("--speed must be positive")
+        return 1
+    run = SimRun(load_scenario(args.scenario), seed=args.seed, tick_s=args.tick, telemetry_s=args.telemetry_interval,
+                 speed=args.speed, out_base=Path(args.out))
+    hours = run.scenario.duration_hours
+    print(f"SIMULATED live run '{run.scenario.id}': {hours:g} simulated hours at {args.speed:g}x "
+          f"(about {hours * 3600 / args.speed / 60:.1f} wall-clock minutes). Ctrl-C stops early.")
+    print(f"Output {run.out_dir}\nDashboard: UETN_OUT_DIR={run.out_dir.parent} uv run streamlit run dashboard/app.py "
+          "(choose Live in the sidebar)")
+    import signal
+
+    def _stop(*_):  # `kill` behaves like Ctrl-C: partial results are saved and the run is marked interrupted
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _stop)
+    out = run.run()
+    if run.summary["status"] == "interrupted":
+        print("Interrupted; partial results saved.")
+    _print_run_summary(run, out, args.tick, args.telemetry_interval)
     return 0
 
 
@@ -195,6 +228,15 @@ def main(argv: list[str] | None = None) -> int:
     rr.add_argument("--data", default=str(topology.DEFAULT_DIR))
     rr.add_argument("--out", default=str(engine.DEFAULT_OUT))
     rr.set_defaults(func=cmd_run)
+    lv = sub.add_parser("live", help="run a v1 scenario paced to the wall clock; the dashboard follows it (Live mode)")
+    lv.add_argument("scenario", help="scenario id in data/scenarios/ or a YAML path")
+    lv.add_argument("--speed", type=float, default=60, help="simulated seconds per wall-clock second (60: a minute per second)")
+    lv.add_argument("--seed", type=int, default=None, help="override the scenario seed")
+    lv.add_argument("--tick", type=float, default=10, help="traffic tick in simulated seconds")
+    lv.add_argument("--telemetry-interval", type=float, default=30, help="averaging interval in simulated seconds")
+    lv.add_argument("--data", default=str(topology.DEFAULT_DIR))
+    lv.add_argument("--out", default=str(engine.DEFAULT_OUT))
+    lv.set_defaults(func=cmd_live)
     r = sub.add_parser("report", help="reports on the topology")
     r.add_argument("--spof", action="store_true", help="single points of failure")
     r.add_argument("--classes", action="store_true", help="directed per-class link loads (v1 baseline)")

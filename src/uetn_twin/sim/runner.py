@@ -170,14 +170,20 @@ class SimRun:
         for proc in (self.scenario_process, self.traffic_process, self.network_process, self.telemetry_process,
                      self.class_telemetry_process):
             self.env.process(proc())
-        self.env.run(until=self.duration_s + 1e-9)
-        self._flush(self.duration_s)
-        self._flush_classes(self.duration_s)
+        status = "finished"
+        try:
+            self.env.run(until=self.duration_s + 1e-9)
+        except KeyboardInterrupt:  # Ctrl-C in live mode: keep what was recorded so far
+            status = "interrupted"
+        end = min(self.env.now, self.duration_s)
+        self._flush(end)
+        self._flush_classes(end)
         self.writer.close()
         self.writer.export_parquet(self.out_dir)
         if not self.keep_sqlite:
             self.writer.delete_sqlite()
-        self.summary = dict(wall_seconds=round(time.perf_counter() - wall, 2), ticks=self.ticks, finished=True)
+        self.summary = dict(wall_seconds=round(time.perf_counter() - wall, 2), ticks=self.ticks,
+                            finished=status == "finished", status=status)
         self._write_meta()
         return self.out_dir
 
@@ -191,7 +197,7 @@ class SimRun:
                             traffic_profile=yaml.safe_load((ROOT / "data" / "traffic_profile.yaml").read_text()),
                             physics=yaml.safe_load((ROOT / "data" / "physics.yaml").read_text()),
                             regions=yaml.safe_load((ROOT / "data" / "regions.yaml").read_text())),
-            finished=False,
+            finished=False, status="running",
         )
         meta.update(self.summary)
         (self.out_dir / "run_meta.json").write_text(json.dumps(meta, indent=2, default=str))

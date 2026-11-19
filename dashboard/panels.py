@@ -1,6 +1,6 @@
-"""Side panels: KPI tiles, top-utilization link table, node detail.
+"""Side panels: KPI tiles, scenario panel, top-utilization link table, node detail. Everything is SIMULATED.
 
-The computations are plain functions on DataFrames/Topology so they can be tested without Streamlit.
+The computations live in data.py as plain functions; this module only draws them.
 """
 
 from __future__ import annotations
@@ -11,71 +11,64 @@ import streamlit as st
 from uetn_twin.topology import Topology
 from uetn_twin.traffic import group_peak_demand_gbps
 
-
-def kpi_values(df_t: pd.DataFrame) -> dict:
-    """df_t: the snapshot rows (one per link) for a single time step."""
-    worst = df_t.loc[df_t.utilization.idxmax()]
-    return dict(
-        total_gbps=float(df_t.total_demand_gbps.iloc[0]),
-        max_util=float(worst.utilization),
-        max_util_link=str(worst.link_id),
-        n_over_80=int((df_t.utilization > 0.8).sum()),
-        unreachable_sites=int(df_t.affected_sites.iloc[0]),
-    )
+STATUS_MARK = {"upcoming": "⏳ upcoming", "active": "\U0001f534 active", "ended": "✓ ended"}
 
 
-def top_links_frame(df_t: pd.DataFrame, topo: Topology, n: int = 10) -> pd.DataFrame:
-    conf = {ln.id: ln.confidence for ln in topo.links}
-    out = df_t.sort_values("utilization", ascending=False).head(n)
-    return pd.DataFrame({
-        "Link": out.link_id.values,
-        "Class": [c.replace("backbone_", "bb ").replace("ethernet_", "eth ") for c in out.link_class],
-        "Cap (G)": out.capacity_gbps.values,
-        "Load (G)": out.load_gbps.round(2).values,
-        "Util": (out.utilization * 100).round().astype(int).values,
-        "Source": [conf[x] for x in out.link_id],
-    })
-
-
-def kpi_tiles(k: dict) -> None:
-    a, b = st.columns(2)
+def kpi_tiles(k: dict, show_unreachable: bool = False) -> None:
+    a, b, c = st.columns(3)
     a.metric("Total traffic", f"{k['total_gbps']:.1f} Gbps")
     b.metric("Max link utilization", f"{k['max_util']:.0%}", help=k["max_util_link"])
-    c, d = st.columns(2)
     c.metric("Links above 80%", k["n_over_80"])
-    d.metric("Unreachable sites", k["unreachable_sites"])
-    d.caption("Active once v1 failure scenarios are introduced")
+    d, e, _ = st.columns(3)
+    d.metric("Dropped traffic", f"{k['dropped_gbps']:.2f} Gbps", help="Offered load that did not fit (interval average)")
+    if show_unreachable:
+        e.metric("Unreachable sites", k["unreachable_sites"], help="Sites cut off by a link-state event")
+
+
+def scenario_panel(run, now_s: float, overlays: list) -> None:
+    sc = run.scenario
+    st.markdown(f"**{sc.title}**")
+    st.caption(" ".join(sc.description.split()))
+    st.markdown(f"Simulated time: **{run.label(now_s)}**")
+    for o in overlays:
+        st.markdown(f"- {run.clock_of(o.start_s):%H:%M} {o.label} ({STATUS_MARK[o.status]})")
+    for e in sc.events:
+        st.markdown(f"- {e.at} link `{e.link}` {'up' if e.up else 'down'}")
 
 
 def top_links_table(frame: pd.DataFrame) -> None:
-    st.markdown("**Most utilized links**")
+    st.markdown("**Busiest link directions**")
     st.dataframe(
         frame, hide_index=True, width="stretch",
         column_config={
-            "Util": st.column_config.NumberColumn("Util", format="%d%%", width="small"),
-            "Source": st.column_config.TextColumn("Source", help="Where the link comes from: map / inferred / assumed (capacity is an estimate unless map)", width="small"),
+            "Util": st.column_config.NumberColumn("Util", format="%d%%", width="small",
+                                                  help="Offered load as a share of capacity; above 100% traffic is dropped"),
+            "Source": st.column_config.TextColumn("Source", help="Where the link comes from: map / inferred / assumed", width="small"),
             "Link": st.column_config.TextColumn("Link", width="medium"),
-            "Class": st.column_config.TextColumn("Class", width="small"),
-            "Cap (G)": st.column_config.NumberColumn("Cap (G)", help="Capacity in Gbps", width="small"),
-            "Load (G)": st.column_config.NumberColumn("Load (G)", help="Load in Gbps", width="small"),
+            "Direction": st.column_config.TextColumn("Direction", width="medium"),
+            "Cap (G)": st.column_config.NumberColumn("Cap (G)", help="Capacity in Gbps, each direction", width="small"),
+            "Load (G)": st.column_config.NumberColumn("Load (G)", width="small"),
+            "Drop (G)": st.column_config.NumberColumn("Drop (G)", width="small"),
         },
     )
 
 
-def node_detail(topo: Topology, node_id: str, link_state: dict[str, dict], node_demand: dict[str, float]) -> None:
+def node_detail(topo: Topology, node_id: str, link_state: dict[str, dict], node_row: pd.Series | None) -> None:
     n = topo.node_map()[node_id]
     st.markdown(f"**{n.name}**  ({n.tier}, {n.kind}, {n.city})")
     st.caption(f"Source: {n.confidence}" + (f" - {n.notes}" if n.notes else ""))
     groups = [g for g in topo.sites if g.parent == node_id]
     if groups:
         g = groups[0]
-        peak = group_peak_demand_gbps(node_id, g, topo.profile)
-        st.write(
-            f"Sites behind this node (assumed): {g.k12_sites} K-12, {g.higher_ed_sites} higher-ed, "
-            f"{g.healthcare_sites} healthcare. Peak demand {peak:.2f} Gbps, now {node_demand.get(node_id, 0):.2f} Gbps."
-        )
+        st.write(f"Sites behind this node (assumed): {g.k12_sites} K-12, {g.higher_ed_sites} higher-ed, "
+                 f"{g.healthcare_sites} healthcare. Peak demand {group_peak_demand_gbps(node_id, g, topo.profile):.2f} Gbps.")
     else:
         st.write("No sites behind this node.")
+    if node_row is not None:
+        line = f"Now: {node_row.demand_gbps:.2f} Gbps of owned demand"
+        if node_row.server_sessions > 0:
+            line += f", {node_row.server_sessions:,.0f} server sessions ({node_row.session_utilization:.0%} of assumed capacity)"
+        st.write(line)
     nodes = topo.node_map()
     rows = []
     for ln in topo.links:
@@ -83,6 +76,7 @@ def node_detail(topo: Topology, node_id: str, link_state: dict[str, dict], node_
             other = ln.b if ln.a == node_id else ln.a
             s = link_state.get(ln.id, {})
             rows.append({"Neighbor": nodes[other].name, "Class": ln.link_class.value.replace("backbone_", "bb ").replace("ethernet_", "eth "),
-                         "Cap (G)": ln.capacity_gbps, "Util": round(s.get("utilization", 0.0) * 100) if s.get("up", True) else None, "Source": ln.confidence})
+                         "Cap (G)": ln.capacity_gbps, "Util": round(s.get("utilization", 0.0) * 100) if s.get("up", True) else None,
+                         "Source": ln.confidence})
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch",
                  column_config={"Util": st.column_config.NumberColumn("Util", format="%d%%")})

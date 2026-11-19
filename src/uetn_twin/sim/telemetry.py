@@ -49,6 +49,9 @@ class TelemetryWriter:
             CREATE INDEX IF NOT EXISTS ix_link ON link_telemetry (link_id, sim_s);
             CREATE INDEX IF NOT EXISTS ix_link_class ON link_class_telemetry (link_id, sim_s);
             CREATE INDEX IF NOT EXISTS ix_node ON node_telemetry (node_id, sim_s);
+            CREATE INDEX IF NOT EXISTS ix_link_t ON link_telemetry (sim_s);
+            CREATE INDEX IF NOT EXISTS ix_node_t ON node_telemetry (sim_s);
+            CREATE INDEX IF NOT EXISTS ix_totals_t ON totals (sim_s);
         """)
         self._node_sql = f"INSERT INTO node_telemetry VALUES ({','.join('?' * (8 + len(self.tracked)))})"
 

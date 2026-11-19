@@ -58,6 +58,7 @@ LEGEND_TEXT = "<br>".join([
     '<span style="color:#1f2a44">\u25a0</span> core (read from map)',
     '<span style="color:#9aa0ab">\u25a0</span> core, inferred (faded)',
     "\u25cb distribution",
+    "<b>Node outline</b> = session load",
     "<b>Line width = link class</b>",
     *[_line_row(CLASS_WIDTH[c], lab) for c, lab in [("backbone_400g", "400G"), ("backbone_100g", "100G"), ("backbone_40g", "40G"),
                                                     ("backbone_20g", "20G"), ("ethernet_10g", "10G"), ("ethernet_1g", "1G")]],
@@ -103,8 +104,12 @@ def group_labels(topo: Topology, shown: set[str]) -> list[tuple[float, float, st
 def build_map(topo: Topology, link_state: dict[str, dict], node_demand: dict[str, float],
               site_counts: dict[str, int], tier_mode: str = "core+distribution",
               link_classes: set[str] | None = None, emphasize_nonmap: bool = False,
-              selected_node: str | None = None, show_labels: bool = True) -> go.Figure:
-    """link_state: link_id -> {up, load_gbps, utilization}. tier_mode: core | core+distribution | all."""
+              selected_node: str | None = None, show_labels: bool = True,
+              node_sessions: dict[str, float] | None = None) -> go.Figure:
+    """link_state: link_id -> {up, load_gbps, utilization, dirs?}. tier_mode: core | core+distribution | all.
+    node_sessions: node id -> server-session utilization; nodes that carry sessions get an outline colored with the
+    same four bands as the links."""
+    node_sessions = node_sessions or {}
     nodes = topo.node_map()
     pos = display_positions(topo)
     tiers = {"core": {"core"}, "core+distribution": {"core", "distribution"}, "all": {"core", "distribution", "external"}}[tier_mode]
@@ -128,7 +133,15 @@ def build_map(topo: Topology, link_state: dict[str, dict], node_demand: dict[str
         lons += [lo, lob, None]
         hover_lat.append((la + lb) / 2)
         hover_lon.append((lo + lob) / 2)
-        state = f"{st['utilization']:.1%} ({st['load_gbps']:.2f} of {ln.capacity_gbps:g} Gbps)" if up else "DOWN"
+        if not up:
+            state = "DOWN"
+        elif st.get("dirs"):
+            state = "".join(
+                f"<br>{nodes[d['frm']].name} > {nodes[d['to']].name}: {d['utilization']:.1%} ({d['gbps']:.2f} of {ln.capacity_gbps:g} Gbps"
+                + (f", dropping {d['dropped']:.2f}" if d["dropped"] > 0.005 else "") + ")" for d in st["dirs"])
+            state += f"<br>latency (rough indicative): {max(d['latency_ms'] for d in st['dirs']):.1f} ms"
+        else:
+            state = f"{st['utilization']:.1%} ({st['load_gbps']:.2f} of {ln.capacity_gbps:g} Gbps)"
         hover_txt.append(f"<b>{nodes[ln.a].name} - {nodes[ln.b].name}</b><br>{ln.link_class.value}, {ln.capacity_gbps:g} Gbps"
                          f"<br>utilization (offered load): {state}<br>source: {ln.confidence}")
 
@@ -154,12 +167,17 @@ def build_map(topo: Topology, link_state: dict[str, dict], node_demand: dict[str
             for i in ids
         ]
         fill = {"core": "#1f2a44", "distribution": "#ffffff", "external": "#9aa0a6"}[tier]
+        sess = [node_sessions.get(i, 0.0) for i in ids]
+        has_sess = [u > 0.01 for u in sess]
+        hover = [h + (f"<br>server sessions: {u:.0%} of assumed capacity" if hs else "") for h, u, hs in zip(hover, sess, has_sess)]
+        outline = ["#e4572e" if s else (BANDS[util_band(u)][1] if hs else "#1f2a44") for s, u, hs in zip(sel, sess, has_sess)]
+        width = [3 if s else (3.5 if hs else 1.2) for s, hs in zip(sel, has_sess)]
         fig.add_trace(go.Scattergeo(
             lat=[pos[i][0] for i in ids], lon=[pos[i][1] for i in ids], mode="markers", customdata=ids,
             text=hover, hoverinfo="text", name=tier, showlegend=False,
             marker=dict(symbol=symbol, size=[size + 5 if s else size for s in sel], color=fill,
                         opacity=[1.0 if nodes[i].confidence == "map" else 0.6 for i in ids],
-                        line=dict(width=[3 if s else 1.2 for s in sel], color=["#e4572e" if s else "#1f2a44" for s in sel]))))
+                        line=dict(width=width, color=outline))))
 
     if show_labels:
         lab = group_labels(topo, shown)

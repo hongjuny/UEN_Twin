@@ -23,8 +23,7 @@ OUT = ROOT / "docs" / "figures" / "v1"
 DEFAULT_LINKS = ["uvu-orem--uvu-wasatch", "kane-sd--tdc-stgeorge"]
 EXIT_LINK = ("slc-level3--slc-ddc", "slc-level3", "slc-ddc")
 SERVER = "uvu-orem"
-CLASS_COLORS = {"k12_instruction": "#4e79a7", "general_internet": "#59a14f", "streaming": "#e15759",
-                "telehealth": "#b07aa1", "research_bulk": "#f28e2b", "transactional": "#76b7b2"}
+from uetn_twin.palette import CLASS_COLORS  # noqa: E402  (shared with the dashboard)
 
 
 def render(fig: go.Figure, dest: Path, page) -> None:
