@@ -94,12 +94,26 @@ uv run streamlit run dashboard/app.py   # restart the dashboard; choose the new 
 
 `validate` also takes `--data <dir>` to check a draft copy of `data/topology` before you replace the real one. It catches a broken network: duplicate ids, links to unknown nodes, two links between the same
 pair, a node cut off from the rest, or a distribution node with no path to the internet exit. Saved runs in the output
-folder keep the old topology, so re-run a scenario (`uv run uetn-twin run <scenario>` or `live`) to see a change.
+folder keep the old topology, so re-run a scenario (`uv run uetn-twin run <scenario>`, or `live <scenario> --speed 60` for the dashboard Live mode) to see a change.
 The numbers quoted in this README (single points of failure, scenario results, screenshots) were produced with the
 topology tagged `v1.0-demo` and will change after you edit it.
 
 Please also record the change in `docs/DATA_PROVENANCE.md` (what changed, who confirmed it, date), so the next reader can
 tell what is measured and what is assumed.
+
+### Reporting a correction without editing YAML
+
+If you would rather tell us than edit the files, send (or open an issue with) one line per correction:
+
+```
+link   uvu-orem--uvu-wasatch   speed: 40G -> 100G           source: UETN network team, <date>
+link   slc-ddc--uvu-orem       does not exist / add         source: ...
+node   ubtc-vernal             attaches to uvu-wasatch      source: ...
+sites  uvu-orem                k12 10 -> 14, healthcare 4   source: ...
+```
+
+Use the node and link ids shown in the dashboard tables and in `data/topology/`. Say whether a value is confirmed or
+your best estimate, so we can set `confidence` correctly.
 
 ## Demand assumption
 
