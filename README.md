@@ -46,6 +46,61 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+. Run outputs go to `o
 - A different backend (e.g. Containerlab) can later implement the same four methods of `NetworkBackend`
   (`load`, `set_link_state`, `apply_demand`, `observe`) without changing the CLI or the dashboard.
 
+## Changing the topology
+
+The network is plain YAML in `data/topology/`; no code changes are needed. Edit, validate, re-run.
+
+| File | Holds | One record looks like |
+|---|---|---|
+| `nodes.yaml` | Routers (core PoPs and distribution nodes) | `{id: uvu-orem, name: UVU, tier: core, city: Orem, lat: 40.27, lon: -111.71, kind: university, confidence: map, notes: ''}` |
+| `links.yaml` | Undirected links between two nodes | `{id: uvu-orem--uvu-wasatch, a: uvu-orem, b: uvu-wasatch, link_class: backbone_40g, confidence: inferred, notes: ''}` |
+| `sites.yaml` | Schools, campuses and clinics behind a node (counts only, not routers) | `{parent: uvu-orem, k12_sites: 10, higher_ed_sites: 1, healthcare_sites: 4, confidence: assumed}` |
+
+Field reference (full schema with descriptions: `src/uetn_twin/schema.py`):
+
+- **`link_class`** sets the capacity: `backbone_400g`, `backbone_100g`, `backbone_40g`, `backbone_20g`, `ethernet_10g`,
+  `ethernet_1g`, `microwave_200m`, `ethernet_sub1g`. To use a different capacity, add `capacity_gbps: 80` to the link.
+- **`latency_ms`** (optional, one way). If omitted, it is estimated from the distance between the two nodes' `lat`/`lon`
+  (constants in `data/physics.yaml`). Add it if you know the real value.
+- **`tier`**: `core` or `distribution`. **`kind`**: `pop`, `datacenter`, `university`, `technical_college`,
+  `school_district`, `healthcare`, `other`. Scenarios select nodes by these (e.g. `kind:university`).
+- **`confidence`**: `map` (read from the UEN|UTN map), `inferred` (our deduction), `assumed` (we made it up). When UETN
+  confirms a value, set it to `map` and put the source in `notes`.
+- Links are undirected and there is at most one link per pair of nodes. Parallel circuits are modeled as one link whose
+  `capacity_gbps` you set to the combined capacity.
+
+### Common edits
+
+| You want to | Do this |
+|---|---|
+| Fix a link's speed | Change `link_class` (or set `capacity_gbps`) on that link in `links.yaml`. |
+| Remove a link that does not exist | Delete its line in `links.yaml`. |
+| Add a missing link | Add a line to `links.yaml` with a new unique `id` (convention `node-a--node-b`), `a`, `b`, `link_class`, `confidence`. |
+| Re-attach a node to a different PoP | Change `a` or `b` on its link (the `id` should follow). |
+| Add a router | Add it to `nodes.yaml`, connect it in `links.yaml`, and add a row in `sites.yaml` if sites sit behind it. A new **core** node must also be listed in exactly one region in `data/regions.yaml`. |
+| Remove a router | Delete it from `nodes.yaml`, delete every link that mentions it, delete its `sites.yaml` row. |
+| Change how many schools or clinics sit behind a node | Edit its row in `sites.yaml` (demand is computed from these counts and `data/traffic_profile.yaml`). |
+| Change the internet exit | `internet_exit_node` in `data/traffic_profile.yaml`. |
+| Rename a node or link id | Possible, but search `data/` for the old id first: `data/scenarios/*.yaml` (targets, events), `data/regions.yaml`, `data/traffic_profile.yaml` (`higher_ed_campus_gbps_by_node`). |
+
+### After editing
+
+```bash
+uv run uetn-twin validate     # schema errors and consistency checks, listed one per line
+uv run pytest -q              # optional safety net
+uv run uetn-twin simulate --hours 24
+uv run streamlit run dashboard/app.py   # restart the dashboard; choose the new run
+```
+
+`validate` also takes `--data <dir>` to check a draft copy of `data/topology` before you replace the real one. It catches a broken network: duplicate ids, links to unknown nodes, two links between the same
+pair, a node cut off from the rest, or a distribution node with no path to the internet exit. Saved runs in the output
+folder keep the old topology, so re-run a scenario (`uv run uetn-twin run <scenario>` or `live`) to see a change.
+The numbers quoted in this README (single points of failure, scenario results, screenshots) were produced with the
+topology tagged `v1.0-demo` and will change after you edit it.
+
+Please also record the change in `docs/DATA_PROVENANCE.md` (what changed, who confirmed it, date), so the next reader can
+tell what is measured and what is assumed.
+
 ## Demand assumption
 
 **Total peak demand assumption: 223.3 Gbps (needs confirmation from UETN).** (258.6 Gbps before v1-platform, when healthcare sites were assumed at 200 Mbps instead of 100 Mbps; see docs/DATA_PROVENANCE.md.)
