@@ -36,18 +36,18 @@ How each value in `data/topology/` was obtained. Source: UEN|UTN Infrastructure 
 | slc-ddc--slc-uofu | backbone_400g | assumed | Full mesh among the four Salt Lake PoPs is an assumption |
 | uvu-orem--richfield-dc | backbone_400g | inferred | Southbound trunk 1 |
 | slc-slcc--suu-cedar | backbone_400g | inferred | Southbound trunk 2 (western route, probably via Millard/Beaver) |
-| richfield-dc--suu-cedar | backbone_400g | inferred | Southern merge point unclear; 대안: richfield-dc to tdc-stgeorge (not created) |
+| richfield-dc--suu-cedar | backbone_400g | inferred | Southern merge point unclear; alternative: richfield-dc to tdc-stgeorge (not created) |
 | tdc-stgeorge--utahtech-stgeorge | backbone_400g | inferred |  |
-| uvu-orem--uvu-wasatch | backbone_40g | inferred | 지도상 등급 불명. 대안: 20G(원래 가정, 평상시 피크 140%로 비현실적) / 400G. 하류 20G 링 2가닥을 공급하는 상류 링크이므로 40G 이상으로 추정. UETN 확인 1순위 |
-| uvu-wasatch--usu-eastern | backbone_20g | inferred | Map ambiguous whether the Price branch hangs off uvu-wasatch; 대안: attaches via uvu-orem |
+| uvu-orem--uvu-wasatch | backbone_40g | inferred | Map grade unclear. Alternatives: 20G (original assumption; unrealistic at 140% of normal peak) / 400G. Upstream link feeding two downstream 20G rings, so estimated at 40G or more. Top priority to confirm with UETN |
+| uvu-wasatch--usu-eastern | backbone_20g | inferred | Map ambiguous whether the Price branch hangs off uvu-wasatch; alternative: attaches via uvu-orem |
 | usu-eastern--moab | backbone_20g | inferred | Purple line from Price to Moab; map ambiguous between uvu-wasatch and usu-eastern |
-| slc-uofu--park-city | ethernet_10g | inferred | 대안: backbone_20g |
+| slc-uofu--park-city | ethernet_10g | inferred | alternative: backbone_20g |
 | ubtc-vernal--usu-vernal | ethernet_10g | inferred | Same city; no line printed |
 | suu-cedar--swtc-cedar | ethernet_10g | inferred | Same city; no line printed |
 | tdc-stgeorge--dixie-tc | ethernet_10g | inferred | Same city; no line printed |
-| wsu-ogden--davis-tc | ethernet_10g | inferred | Not in work order table; attached to nearest PoP so the node is not isolated. 대안: attaches at Salt Lake |
+| wsu-ogden--davis-tc | ethernet_10g | inferred | Not in work order table; attached to nearest PoP so the node is not isolated. alternative: attaches at Salt Lake |
 | wsu-ogden--ogden-weber-tc | ethernet_10g | inferred | Not in work order table; same city as wsu-ogden |
-| uvu-orem--mountainland-tc | ethernet_10g | inferred | Not in work order table; nearest PoP. 대안: attaches at Salt Lake |
+| uvu-orem--mountainland-tc | ethernet_10g | inferred | Not in work order table; nearest PoP. alternative: attaches at Salt Lake |
 | richfield-dc--snow-richfield | ethernet_10g | inferred | Not in work order table; same city as richfield-dc |
 | cache-sd--usu-logan | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | logan-sd--usu-logan | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
@@ -57,7 +57,7 @@ How each value in `data/topology/` was obtained. Source: UEN|UTN Infrastructure 
 | ogden-sd--wsu-ogden | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | weber-sd--wsu-ogden | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | morgan-sd--wsu-ogden | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
-| davis-sd--wsu-ogden | ethernet_10g | inferred | wsu-ogden chosen; 대안: slc (Salt Lake side) |
+| davis-sd--wsu-ogden | ethernet_10g | inferred | wsu-ogden chosen; alternative: slc (Salt Lake side) |
 | nsummit-sd--park-city | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | ssummit-sd--park-city | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | wasatch-sd--uvu-wasatch | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
@@ -66,15 +66,15 @@ How each value in `data/topology/` was obtained. Source: UEN|UTN Infrastructure 
 | nebo-sd--uvu-orem | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | juab-sd--uvu-orem | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | tintic-sd--uvu-orem | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
-| nsanpete-sd--snow-ephraim | ethernet_10g | inferred | snow-ephraim chosen; 대안: uvu-orem |
+| nsanpete-sd--snow-ephraim | ethernet_10g | inferred | snow-ephraim chosen; alternative: uvu-orem |
 | snow-ephraim--richfield-dc | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | ssanpete-sd--snow-ephraim | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | sevier-sd--richfield-dc | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | piute-sd--richfield-dc | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | wayne-sd--richfield-dc | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
-| garfield-sd--richfield-dc | ethernet_10g | inferred | richfield-dc chosen; 대안: suu-cedar |
-| beaver-sd--suu-cedar | ethernet_10g | inferred | suu-cedar chosen; 대안: richfield-dc |
-| millard-sd--slc-slcc | ethernet_10g | inferred | slc-slcc chosen (via western 400G trunk; latency left as the distance-derived value); 대안: other attach point on the southbound trunk |
+| garfield-sd--richfield-dc | ethernet_10g | inferred | richfield-dc chosen; alternative: suu-cedar |
+| beaver-sd--suu-cedar | ethernet_10g | inferred | suu-cedar chosen; alternative: richfield-dc |
+| millard-sd--slc-slcc | ethernet_10g | inferred | slc-slcc chosen (via western 400G trunk; latency left as the distance-derived value); alternative: other attach point on the southbound trunk |
 | iron-sd--suu-cedar | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | washington-sd--tdc-stgeorge | ethernet_10g | inferred | Parent PoP inferred from where the line ends |
 | kane-sd--tdc-stgeorge | ethernet_1g | inferred | 1G, single path |
@@ -90,8 +90,8 @@ How each value in `data/topology/` was obtained. Source: UEN|UTN Infrastructure 
 
 | link | note |
 |---|---|
-| usu-logan--wsu-ogden | 지도상 병렬 2회선 가능성; modeled as one link, capacity not doubled |
-| slc-ddc--uvu-orem | 지도상 병렬 2회선 가능성; modeled as one link, capacity not doubled. Salt Lake end assumed slc-ddc |
+| usu-logan--wsu-ogden | map suggests a possible parallel double circuit; modeled as one link, capacity not doubled |
+| slc-ddc--uvu-orem | map suggests a possible parallel double circuit; modeled as one link, capacity not doubled. Salt Lake end assumed slc-ddc |
 | suu-cedar--tdc-stgeorge | Red line |
 | iron-sd--tdc-stgeorge | Red line; iron-sd is also attached to suu-cedar |
 | uvu-wasatch--ubtc-roosevelt | Purple line via Duchesne |

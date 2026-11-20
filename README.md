@@ -1,7 +1,5 @@
 # uetn-twin
 
-한국어: [README_ko.md](README_ko.md)
-
 A flow-level digital twin of the UETN (Utah Education and Telehealth Network) backbone, with a map-based
 monitoring dashboard. It is the first stage of an in-silico benchmark for network management and agentic AI:
 a simulated network on which abnormal situations (link cuts, power outages, demand surges, misconfigurations,

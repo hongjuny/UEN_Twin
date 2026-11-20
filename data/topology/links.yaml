@@ -1,7 +1,7 @@
 # Undirected links. Capacity defaults to the link class. Latency is derived from distance (data/physics.yaml);
 # derived latency is ASSUMED for every link regardless of confidence.
 links:
-- {id: usu-logan--wsu-ogden, a: usu-logan, b: wsu-ogden, link_class: backbone_400g, confidence: map, notes: '지도상 병렬 2회선 가능성;
+- {id: usu-logan--wsu-ogden, a: usu-logan, b: wsu-ogden, link_class: backbone_400g, confidence: map, notes: 'map suggests a possible parallel double circuit;
     modeled as one link, capacity not doubled'}
 - {id: usu-logan--btc-logan, a: usu-logan, b: btc-logan, link_class: backbone_100g, confidence: map, notes: ''}
 - {id: wsu-ogden--slc-ddc, a: wsu-ogden, b: slc-ddc, link_class: backbone_400g, confidence: inferred, notes: Map does not
@@ -18,27 +18,26 @@ links:
     the four Salt Lake PoPs is an assumption}
 - {id: slc-ddc--slc-uofu, a: slc-ddc, b: slc-uofu, link_class: backbone_400g, confidence: assumed, notes: Full mesh among
     the four Salt Lake PoPs is an assumption}
-- {id: slc-ddc--uvu-orem, a: slc-ddc, b: uvu-orem, link_class: backbone_400g, confidence: map, notes: '지도상 병렬 2회선 가능성; modeled
+- {id: slc-ddc--uvu-orem, a: slc-ddc, b: uvu-orem, link_class: backbone_400g, confidence: map, notes: 'map suggests a possible parallel double circuit; modeled
     as one link, capacity not doubled. Salt Lake end assumed slc-ddc'}
 - {id: uvu-orem--richfield-dc, a: uvu-orem, b: richfield-dc, link_class: backbone_400g, confidence: inferred, notes: Southbound
     trunk 1}
 - {id: slc-slcc--suu-cedar, a: slc-slcc, b: suu-cedar, link_class: backbone_400g, confidence: inferred, notes: 'Southbound
     trunk 2 (western route, probably via Millard/Beaver)'}
 - {id: richfield-dc--suu-cedar, a: richfield-dc, b: suu-cedar, link_class: backbone_400g, confidence: inferred, notes: 'Southern
-    merge point unclear; 대안: richfield-dc to tdc-stgeorge (not created)'}
+    merge point unclear; alternative: richfield-dc to tdc-stgeorge (not created)'}
 - {id: suu-cedar--tdc-stgeorge, a: suu-cedar, b: tdc-stgeorge, link_class: backbone_100g, confidence: map, notes: Red line}
 - {id: iron-sd--tdc-stgeorge, a: iron-sd, b: tdc-stgeorge, link_class: backbone_100g, confidence: map, notes: Red line; iron-sd
     is also attached to suu-cedar}
 - {id: tdc-stgeorge--utahtech-stgeorge, a: tdc-stgeorge, b: utahtech-stgeorge, link_class: backbone_400g, confidence: inferred,
   notes: ''}
-- {id: uvu-orem--uvu-wasatch, a: uvu-orem, b: uvu-wasatch, link_class: backbone_40g, confidence: inferred, notes: '지도상 등급
-    불명. 대안: 20G(원래 가정, 평상시 피크 140%로 비현실적) / 400G. 하류 20G 링 2가닥을 공급하는 상류 링크이므로 40G 이상으로 추정. UETN 확인 1순위'}
+- {id: uvu-orem--uvu-wasatch, a: uvu-orem, b: uvu-wasatch, link_class: backbone_40g, confidence: inferred, notes: 'Map grade unclear. Alternatives: 20G (original assumption; unrealistic at 140% of normal peak) / 400G. Upstream link feeding two downstream 20G rings, so estimated at 40G or more. Top priority to confirm with UETN'}
 - {id: uvu-wasatch--ubtc-roosevelt, a: uvu-wasatch, b: ubtc-roosevelt, link_class: backbone_20g, confidence: map, notes: Purple
     line via Duchesne}
 - {id: ubtc-roosevelt--ubtc-vernal, a: ubtc-roosevelt, b: ubtc-vernal, link_class: backbone_20g, confidence: map, notes: ''}
 - {id: ubtc-vernal--moab, a: ubtc-vernal, b: moab, link_class: backbone_20g, confidence: map, notes: 'Eastern edge, southbound'}
 - {id: uvu-wasatch--usu-eastern, a: uvu-wasatch, b: usu-eastern, link_class: backbone_20g, confidence: inferred, notes: 'Map
-    ambiguous whether the Price branch hangs off uvu-wasatch; 대안: attaches via uvu-orem'}
+    ambiguous whether the Price branch hangs off uvu-wasatch; alternative: attaches via uvu-orem'}
 - {id: usu-eastern--moab, a: usu-eastern, b: moab, link_class: backbone_20g, confidence: inferred, notes: Purple line from
     Price to Moab; map ambiguous between uvu-wasatch and usu-eastern}
 - {id: moab--sanjuan-media, a: moab, b: sanjuan-media, link_class: backbone_20g, confidence: map, notes: ''}
@@ -49,7 +48,7 @@ links:
     slc-slcc}
 - {id: slc-slcc--tooele-tc, a: slc-slcc, b: tooele-tc, link_class: ethernet_10g, confidence: map, notes: Salt Lake end assumed
     slc-slcc}
-- {id: slc-uofu--park-city, a: slc-uofu, b: park-city, link_class: ethernet_10g, confidence: inferred, notes: '대안: backbone_20g'}
+- {id: slc-uofu--park-city, a: slc-uofu, b: park-city, link_class: ethernet_10g, confidence: inferred, notes: 'alternative: backbone_20g'}
 - {id: ubtc-vernal--usu-vernal, a: ubtc-vernal, b: usu-vernal, link_class: ethernet_10g, confidence: inferred, notes: Same
     city; no line printed}
 - {id: suu-cedar--swtc-cedar, a: suu-cedar, b: swtc-cedar, link_class: ethernet_10g, confidence: inferred, notes: Same city;
@@ -57,11 +56,11 @@ links:
 - {id: tdc-stgeorge--dixie-tc, a: tdc-stgeorge, b: dixie-tc, link_class: ethernet_10g, confidence: inferred, notes: Same city;
     no line printed}
 - {id: wsu-ogden--davis-tc, a: wsu-ogden, b: davis-tc, link_class: ethernet_10g, confidence: inferred, notes: 'Not in work
-    order table; attached to nearest PoP so the node is not isolated. 대안: attaches at Salt Lake'}
+    order table; attached to nearest PoP so the node is not isolated. alternative: attaches at Salt Lake'}
 - {id: wsu-ogden--ogden-weber-tc, a: wsu-ogden, b: ogden-weber-tc, link_class: ethernet_10g, confidence: inferred, notes: Not
     in work order table; same city as wsu-ogden}
 - {id: uvu-orem--mountainland-tc, a: uvu-orem, b: mountainland-tc, link_class: ethernet_10g, confidence: inferred, notes: 'Not
-    in work order table; nearest PoP. 대안: attaches at Salt Lake'}
+    in work order table; nearest PoP. alternative: attaches at Salt Lake'}
 - {id: richfield-dc--snow-richfield, a: richfield-dc, b: snow-richfield, link_class: ethernet_10g, confidence: inferred, notes: Not
     in work order table; same city as richfield-dc}
 - {id: cache-sd--usu-logan, a: cache-sd, b: usu-logan, link_class: ethernet_10g, confidence: inferred, notes: Parent PoP inferred
@@ -81,7 +80,7 @@ links:
 - {id: morgan-sd--wsu-ogden, a: morgan-sd, b: wsu-ogden, link_class: ethernet_10g, confidence: inferred, notes: Parent PoP
     inferred from where the line ends}
 - {id: davis-sd--wsu-ogden, a: davis-sd, b: wsu-ogden, link_class: ethernet_10g, confidence: inferred, notes: 'wsu-ogden chosen;
-    대안: slc (Salt Lake side)'}
+    alternative: slc (Salt Lake side)'}
 - {id: nsummit-sd--park-city, a: nsummit-sd, b: park-city, link_class: ethernet_10g, confidence: inferred, notes: Parent PoP
     inferred from where the line ends}
 - {id: ssummit-sd--park-city, a: ssummit-sd, b: park-city, link_class: ethernet_10g, confidence: inferred, notes: Parent PoP
@@ -99,7 +98,7 @@ links:
 - {id: tintic-sd--uvu-orem, a: tintic-sd, b: uvu-orem, link_class: ethernet_10g, confidence: inferred, notes: Parent PoP inferred
     from where the line ends}
 - {id: nsanpete-sd--snow-ephraim, a: nsanpete-sd, b: snow-ephraim, link_class: ethernet_10g, confidence: inferred, notes: 'snow-ephraim
-    chosen; 대안: uvu-orem'}
+    chosen; alternative: uvu-orem'}
 - {id: snow-ephraim--richfield-dc, a: snow-ephraim, b: richfield-dc, link_class: ethernet_10g, confidence: inferred, notes: Parent
     PoP inferred from where the line ends}
 - {id: ssanpete-sd--snow-ephraim, a: ssanpete-sd, b: snow-ephraim, link_class: ethernet_10g, confidence: inferred, notes: Parent
@@ -111,11 +110,11 @@ links:
 - {id: wayne-sd--richfield-dc, a: wayne-sd, b: richfield-dc, link_class: ethernet_10g, confidence: inferred, notes: Parent
     PoP inferred from where the line ends}
 - {id: garfield-sd--richfield-dc, a: garfield-sd, b: richfield-dc, link_class: ethernet_10g, confidence: inferred, notes: 'richfield-dc
-    chosen; 대안: suu-cedar'}
+    chosen; alternative: suu-cedar'}
 - {id: beaver-sd--suu-cedar, a: beaver-sd, b: suu-cedar, link_class: ethernet_10g, confidence: inferred, notes: 'suu-cedar
-    chosen; 대안: richfield-dc'}
+    chosen; alternative: richfield-dc'}
 - {id: millard-sd--slc-slcc, a: millard-sd, b: slc-slcc, link_class: ethernet_10g, confidence: inferred, notes: 'slc-slcc
-    chosen (via western 400G trunk; latency left as the distance-derived value); 대안: other attach point on the southbound
+    chosen (via western 400G trunk; latency left as the distance-derived value); alternative: other attach point on the southbound
     trunk'}
 - {id: iron-sd--suu-cedar, a: iron-sd, b: suu-cedar, link_class: ethernet_10g, confidence: inferred, notes: Parent PoP inferred
     from where the line ends}
